@@ -1,0 +1,55 @@
+/* Zk Vault Autofill Styles */
+
+.zk-vault-icon {
+    position: absolute;
+    cursor: pointer;
+    z-index: 999999;
+    width: 20px;
+    height: 20px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    transition: opacity 0.2s;
+    opacity: 0.7;
+}
+
+.zk-vault-icon:hover {
+    opacity: 1;
+    filter: drop-shadow(0 0 2px rgba(99, 102, 241, 0.5));
+}
+
+.zk-vault-dropdown {
+    position: absolute;
+    z-index: 999999;
+    background: #1e293b;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 8px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    color: white;
+    min-width: 200px;
+    font-family: system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+}
+
+.zk-vault-dropdown-item {
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    display: flex;
+    flex-direction: column;
+}
+
+.zk-vault-dropdown-item:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.zk-vault-dropdown-title {
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
+.zk-vault-dropdown-user {
+    font-size: 12px;
+    color: #94a3b8;
+}
