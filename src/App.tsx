@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Search, Lock } from 'lucide-react';
+import { Plus, Search, Lock, Settings } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { VaultProvider, useVault } from './context/VaultContext';
 import { PasswordCard } from './components/PasswordCard';
@@ -58,12 +58,22 @@ const VaultContent: React.FC = () => {
               <p className="text-sm text-slate-400">Your secure password manager</p>
             </div>
           </div>
-          <button
-            onClick={lock}
-            className="btn-secondary px-4 py-2 text-xs font-semibold tracking-wide uppercase hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-400 h-fit"
-          >
-            Logout
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={lock}
+              className="btn-icon p-2 hover:bg-red-500/10 hover:text-red-400"
+              title="Lock Vault"
+            >
+              <Lock size={18} />
+            </button>
+            <button
+              onClick={() => chrome.runtime.openOptionsPage()}
+              className="btn-icon p-2"
+              title="Settings"
+            >
+              <Settings size={18} />
+            </button>
+          </div>
         </div>
 
         {/* Search Bar */}
@@ -118,13 +128,14 @@ const VaultContent: React.FC = () => {
         </div>
       )}
 
-      {/* Modal */}
       <PasswordModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         onSave={handleAddRecord}
         editRecord={editingRecord}
       />
+
+
     </div>
   );
 };

@@ -8,6 +8,7 @@ interface VaultContextType {
     records: PasswordRecord[];
     loading: boolean;
     addRecord: (record: Omit<PasswordRecord, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+    addRecords: (records: Omit<PasswordRecord, 'id' | 'createdAt' | 'updatedAt'>[]) => Promise<void>;
     updateRecord: (id: string, updates: Partial<Omit<PasswordRecord, 'id' | 'createdAt'>>) => Promise<void>;
     deleteRecord: (id: string) => Promise<void>;
     searchRecords: (query: string) => Promise<PasswordRecord[]>;
@@ -96,16 +97,20 @@ export const VaultProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     };
 
     const addRecord = async (record: Omit<PasswordRecord, 'id' | 'createdAt' | 'updatedAt'>) => {
+        await addRecords([record]);
+    };
+
+    const addRecords = async (newRecordsData: Omit<PasswordRecord, 'id' | 'createdAt' | 'updatedAt'>[]) => {
         const now = Date.now();
-        const newRecord: PasswordRecord = {
-            ...record,
+        const recordsToAdd: PasswordRecord[] = newRecordsData.map(r => ({
+            ...r,
             id: crypto.randomUUID(),
             createdAt: now,
             updatedAt: now,
-        };
+        }));
 
-        const updatedRecords = [...records, newRecord];
-        setRecords(updatedRecords); // Optimistic update
+        const updatedRecords = [...records, ...recordsToAdd];
+        setRecords(updatedRecords);
         await saveToStorage(updatedRecords);
     };
 
@@ -146,6 +151,7 @@ export const VaultProvider: React.FC<{ children: ReactNode }> = ({ children }) =
                 records,
                 loading,
                 addRecord,
+                addRecords,
                 updateRecord,
                 deleteRecord,
                 searchRecords,
