@@ -12,6 +12,7 @@ interface AuthContextType {
     setupVault: (password: string) => Promise<void>;
     changeMasterPassword: (oldPassword: string, newPassword: string) => Promise<boolean>;
     masterKey: CryptoKey | null;
+    lastUnlockAt: number | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -21,6 +22,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [hasVault, setHasVault] = useState(false);
     const [loading, setLoading] = useState(true);
     const [masterKey, setMasterKey] = useState<CryptoKey | null>(null);
+    const [lastUnlockAt, setLastUnlockAt] = useState<number | null>(null);
 
     useEffect(() => {
         checkVaultStatus();
@@ -29,6 +31,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (message.type === 'VAULT_LOCKED_MSG') {
                 setIsAuthenticated(false);
                 setMasterKey(null);
+                setLastUnlockAt(null);
             }
         };
 
@@ -73,6 +76,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 await chrome.storage.session.set({ masterKey: exportedKey });
 
                 setMasterKey(key);
+                setLastUnlockAt(Date.now());
                 setIsAuthenticated(true);
                 return true;
             }
@@ -112,6 +116,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             await chrome.storage.session.set({ masterKey: exportedKey });
 
             setMasterKey(key);
+            setLastUnlockAt(Date.now());
             setHasVault(true);
             setIsAuthenticated(true);
         } catch (error) {
@@ -191,6 +196,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const lock = () => {
         chrome.storage.session.remove('masterKey');
         setMasterKey(null);
+        setLastUnlockAt(null);
         setIsAuthenticated(false);
     };
 
@@ -205,6 +211,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 setupVault,
                 changeMasterPassword,
                 masterKey,
+                lastUnlockAt,
             }}
         >
             {children}

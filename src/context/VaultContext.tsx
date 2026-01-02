@@ -1,31 +1,33 @@
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import type { PasswordRecord, EncryptedPasswordRecord } from '../types';
+import type { VaultRecord, EncryptedVaultRecord } from '../types';
 import { storageService } from '../services/storage';
 import { cryptoService } from '../services/crypto';
 import { useAuth } from './AuthContext';
 
 interface VaultContextType {
-    records: PasswordRecord[];
+    records: VaultRecord[];
     loading: boolean;
-    addRecord: (record: Omit<PasswordRecord, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
-    addRecords: (records: Omit<PasswordRecord, 'id' | 'createdAt' | 'updatedAt'>[]) => Promise<void>;
-    updateRecord: (id: string, updates: Partial<Omit<PasswordRecord, 'id' | 'createdAt'>>) => Promise<void>;
+    addRecord: (record: Omit<VaultRecord, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+    addRecords: (records: Omit<VaultRecord, 'id' | 'createdAt' | 'updatedAt'>[]) => Promise<void>;
+    updateRecord: (id: string, updates: Partial<Omit<VaultRecord, 'id' | 'createdAt'>>) => Promise<void>;
     deleteRecord: (id: string) => Promise<void>;
-    searchRecords: (query: string) => Promise<PasswordRecord[]>;
+    searchRecords: (query: string) => Promise<VaultRecord[]>;
     refreshRecords: () => Promise<void>;
+    recentActivity: { type: string; title: string; timestamp: number }[];
 }
 
 const VaultContext = createContext<VaultContextType | undefined>(undefined);
 
 export const VaultProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const [records, setRecords] = useState<PasswordRecord[]>([]);
-    const [loading, setLoading] = useState(false); // Changed default to false, loaded via auth
+    const [records, setRecords] = useState<VaultRecord[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [recentActivity, setRecentActivity] = useState<{ type: string; title: string; timestamp: number }[]>([]);
     const { isAuthenticated, masterKey } = useAuth();
 
-    const decryptRecords = async (encryptedRecords: EncryptedPasswordRecord[]): Promise<PasswordRecord[]> => {
+    const decryptRecords = async (encryptedRecords: EncryptedVaultRecord[]): Promise<VaultRecord[]> => {
         if (!masterKey) return [];
 
-        const decrypted: PasswordRecord[] = [];
+        const decrypted: VaultRecord[] = [];
         for (const record of encryptedRecords) {
             try {
                 const jsonStr = await cryptoService.decrypt(
@@ -34,12 +36,16 @@ export const VaultProvider: React.FC<{ children: ReactNode }> = ({ children }) =
                     masterKey
                 );
                 const data = JSON.parse(jsonStr);
+
+                // Ensure type exists for old records
+                if (!data.type) data.type = 'login';
+
                 decrypted.push({
                     id: record.id,
                     createdAt: record.createdAt,
                     updatedAt: record.updatedAt,
                     ...data
-                });
+                } as VaultRecord);
             } catch (e) {
                 console.error(`Failed to decrypt record ${record.id}`, e);
             }
@@ -71,13 +77,13 @@ export const VaultProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         loadRecords();
     }, [isAuthenticated, masterKey]);
 
-    const saveToStorage = async (newRecords: PasswordRecord[]) => {
+    const saveToStorage = async (newRecords: VaultRecord[]) => {
         if (!masterKey) throw new Error('Vault is locked');
 
         const vaultData = await storageService.loadVaultData();
         if (!vaultData) throw new Error('Vault data missing');
 
-        const encryptedRecords: EncryptedPasswordRecord[] = [];
+        const encryptedRecords: EncryptedVaultRecord[] = [];
 
         for (const record of newRecords) {
             const { id, createdAt, updatedAt, ...rest } = record;
@@ -96,49 +102,81 @@ export const VaultProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         await storageService.saveVaultData(vaultData);
     };
 
-    const addRecord = async (record: Omit<PasswordRecord, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const addRecord = async (record: Omit<VaultRecord, 'id' | 'createdAt' | 'updatedAt'>) => {
         await addRecords([record]);
     };
 
-    const addRecords = async (newRecordsData: Omit<PasswordRecord, 'id' | 'createdAt' | 'updatedAt'>[]) => {
+    const addRecords = async (newRecordsData: Omit<VaultRecord, 'id' | 'createdAt' | 'updatedAt'>[]) => {
         const now = Date.now();
-        const recordsToAdd: PasswordRecord[] = newRecordsData.map(r => ({
+        const recordsToAdd: VaultRecord[] = newRecordsData.map(r => ({
             ...r,
-            id: crypto.randomUUID(),
+            id: (crypto as any).randomUUID(),
             createdAt: now,
             updatedAt: now,
-        }));
+        } as VaultRecord));
 
         const updatedRecords = [...records, ...recordsToAdd];
         setRecords(updatedRecords);
+
+        // Log activity
+        const newActivities = recordsToAdd.map(r => ({ type: 'ADD', title: r.title, timestamp: now }));
+        setRecentActivity(prev => [...newActivities, ...prev].slice(0, 10));
+
         await saveToStorage(updatedRecords);
     };
 
-    const updateRecord = async (id: string, updates: Partial<Omit<PasswordRecord, 'id' | 'createdAt'>>) => {
-        const updatedRecords = records.map(r => {
+    const updateRecord = async (id: string, updates: Partial<Omit<VaultRecord, 'id' | 'createdAt'>>) => {
+        const target = records.find(r => r.id === id);
+        const updatedRecords = records.map((r: VaultRecord) => {
             if (r.id === id) {
-                return { ...r, ...updates, updatedAt: Date.now() };
+                return { ...r, ...updates, updatedAt: Date.now() } as VaultRecord;
             }
             return r;
         });
+
+        if (target) {
+            setRecentActivity(prev => [{ type: 'UPDATE', title: target.title, timestamp: Date.now() }, ...prev].slice(0, 10));
+        }
 
         setRecords(updatedRecords);
         await saveToStorage(updatedRecords);
     };
 
     const deleteRecord = async (id: string) => {
-        const updatedRecords = records.filter(r => r.id !== id);
+        const target = records.find(r => r.id === id);
+        const updatedRecords = records.filter((r: VaultRecord) => r.id !== id);
+
+        if (target) {
+            setRecentActivity(prev => [{ type: 'DELETE', title: target.title, timestamp: Date.now() }, ...prev].slice(0, 10));
+        }
+
         setRecords(updatedRecords);
         await saveToStorage(updatedRecords);
     };
 
     const searchRecords = async (query: string) => {
         const lowerQuery = query.toLowerCase();
-        return records.filter(record =>
-            record.title.toLowerCase().includes(lowerQuery) ||
-            record.username.toLowerCase().includes(lowerQuery) ||
-            record.url?.toLowerCase().includes(lowerQuery)
-        );
+        return records.filter((record: VaultRecord) => {
+            const inTitle = record.title.toLowerCase().includes(lowerQuery);
+            const inNotes = record.notes?.toLowerCase().includes(lowerQuery);
+
+            let inTypeSpecific = false;
+            if (record.type === 'login') {
+                inTypeSpecific = (record as any).username?.toLowerCase().includes(lowerQuery) ||
+                    (record as any).url?.toLowerCase().includes(lowerQuery);
+            } else if (record.type === 'identity') {
+                inTypeSpecific = (record as any).email?.toLowerCase().includes(lowerQuery) ||
+                    (record as any).firstName?.toLowerCase().includes(lowerQuery) ||
+                    (record as any).lastName?.toLowerCase().includes(lowerQuery);
+            } else if (record.type === 'card') {
+                inTypeSpecific = (record as any).cardholderName?.toLowerCase().includes(lowerQuery) ||
+                    (record as any).brand?.toLowerCase().includes(lowerQuery);
+            } else if (record.type === 'note') {
+                inTypeSpecific = (record as any).content?.toLowerCase().includes(lowerQuery);
+            }
+
+            return inTitle || inNotes || inTypeSpecific;
+        });
     };
 
     const refreshRecords = async () => {
@@ -156,6 +194,7 @@ export const VaultProvider: React.FC<{ children: ReactNode }> = ({ children }) =
                 deleteRecord,
                 searchRecords,
                 refreshRecords,
+                recentActivity,
             }}
         >
             {children}

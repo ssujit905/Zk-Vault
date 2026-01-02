@@ -1,14 +1,49 @@
+export type VaultItemType = 'login' | 'note' | 'identity' | 'card';
+
 // Decrypted record (in-memory only)
-export interface PasswordRecord {
+export interface BaseRecord {
     id: string;
+    type: VaultItemType;
     title: string;
-    username: string;
-    password: string;
-    url?: string;
     notes?: string;
+    favorite?: boolean;
     createdAt: number;
     updatedAt: number;
 }
+
+export interface LoginRecord extends BaseRecord {
+    type: 'login';
+    username: string;
+    password: string;
+    url?: string;
+}
+
+export interface NoteRecord extends BaseRecord {
+    type: 'note';
+    content: string;
+}
+
+export interface IdentityRecord extends BaseRecord {
+    type: 'identity';
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string;
+}
+
+export interface CardRecord extends BaseRecord {
+    type: 'card';
+    cardholderName: string;
+    cardNumber: string;
+    expiryDate: string; // MM/YY
+    cvv: string;
+    brand?: string; // Visa, Master, etc.
+}
+
+export type VaultRecord = LoginRecord | NoteRecord | IdentityRecord | CardRecord;
+
+// Backward compatibility alias
+export type PasswordRecord = LoginRecord;
 
 // Encrypted blob structure
 export interface EncryptedBlob {
@@ -17,12 +52,15 @@ export interface EncryptedBlob {
 }
 
 // Encrypted record (storage)
-export interface EncryptedPasswordRecord {
+export interface EncryptedVaultRecord {
     id: string;
-    encryptedData: EncryptedBlob; // Contains stringified JSON of (title, username, password, url, notes)
+    encryptedData: EncryptedBlob;
     createdAt: number;
     updatedAt: number;
 }
+
+// Backward compatibility alias
+export type EncryptedPasswordRecord = EncryptedVaultRecord;
 
 export interface SecurityData {
     salt: string; // Base64 encoded salt for PBKDF2
@@ -30,7 +68,7 @@ export interface SecurityData {
 }
 
 export interface VaultData {
-    records: EncryptedPasswordRecord[];
+    records: EncryptedVaultRecord[];
     security?: SecurityData;
     version: string;
 }

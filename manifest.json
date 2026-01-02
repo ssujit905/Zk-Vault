@@ -8,7 +8,8 @@
         "clipboardWrite",
         "alarms",
         "offscreen",
-        "idle"
+        "idle",
+        "contextMenus"
     ],
     "action": {
         "default_popup": "index.html",
@@ -48,5 +49,14 @@
             ]
         }
     ],
-    "options_page": "options.html"
+    "options_page": "options.html",
+    "commands": {
+        "panic-lock": {
+            "suggested_key": {
+                "default": "Ctrl+Shift+L",
+                "mac": "Command+Shift+L"
+            },
+            "description": "Panic Lock: Instantly lock the vault and clear data"
+        }
+    }
 }

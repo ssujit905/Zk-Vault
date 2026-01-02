@@ -1,21 +1,22 @@
 import React, { useState } from 'react';
-import { Plus, Search, Lock, Settings } from 'lucide-react';
+import { Plus, Search, Lock, Settings, ShieldAlert } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { VaultProvider, useVault } from './context/VaultContext';
-import { PasswordCard } from './components/PasswordCard';
-import { PasswordModal } from './components/PasswordModal';
+import { VaultItemCard } from './components/VaultItemCard';
+import { VaultItemModal } from './components/VaultItemModal';
 import { SetupScreen } from './components/auth/SetupScreen';
 import { LoginScreen } from './components/auth/LoginScreen';
-import type { PasswordRecord } from './types';
+import { StatusPanel } from './components/StatusPanel';
+import type { VaultRecord } from './types';
 
 const VaultContent: React.FC = () => {
   const { records, loading, addRecord, updateRecord, deleteRecord } = useVault();
   const { lock } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingRecord, setEditingRecord] = useState<PasswordRecord | null>(null);
+  const [editingRecord, setEditingRecord] = useState<VaultRecord | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const handleAddRecord = async (record: Omit<PasswordRecord, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const handleSaveRecord = async (record: any) => {
     if (editingRecord) {
       await updateRecord(editingRecord.id, record);
       setEditingRecord(null);
@@ -24,13 +25,13 @@ const VaultContent: React.FC = () => {
     }
   };
 
-  const handleEdit = (record: PasswordRecord) => {
+  const handleEdit = (record: VaultRecord) => {
     setEditingRecord(record);
     setIsModalOpen(true);
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this credential?')) {
+    if (confirm('Are you sure you want to delete this item?')) {
       await deleteRecord(id);
     }
   };
@@ -40,11 +41,23 @@ const VaultContent: React.FC = () => {
     setEditingRecord(null);
   };
 
-  const filteredRecords = records.filter(record =>
-    record.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    record.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    record.url?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredRecords = records.filter(record => {
+    const q = searchQuery.toLowerCase();
+    const inTitle = record.title.toLowerCase().includes(q);
+
+    let inSpecific = false;
+    if (record.type === 'login') {
+      inSpecific = record.username.toLowerCase().includes(q) || (record.url?.toLowerCase().includes(q) ?? false);
+    } else if (record.type === 'identity') {
+      inSpecific = record.email.toLowerCase().includes(q) || record.firstName.toLowerCase().includes(q) || record.lastName.toLowerCase().includes(q);
+    } else if (record.type === 'card') {
+      inSpecific = record.cardholderName.toLowerCase().includes(q) || (record.brand?.toLowerCase().includes(q) ?? false);
+    } else if (record.type === 'note') {
+      inSpecific = record.content.toLowerCase().includes(q);
+    }
+
+    return inTitle || inSpecific;
+  });
 
   return (
     <div className="min-h-screen w-full p-6">
@@ -55,10 +68,20 @@ const VaultContent: React.FC = () => {
             <img src="/icons/icon48.png" alt="Zk Vault" className="w-10 h-10 drop-shadow-md" />
             <div>
               <h1 className="text-3xl font-bold text-gradient">Zk Vault</h1>
-              <p className="text-sm text-slate-400">Your secure password manager</p>
+              <StatusPanel compact />
             </div>
           </div>
           <div className="flex gap-2">
+            <button
+              onClick={() => {
+                lock();
+                chrome.runtime.sendMessage({ type: 'SCHEDULE_CLIPBOARD_CLEAR' });
+              }}
+              className="btn-icon p-2 hover:bg-yellow-500/10 hover:text-yellow-400"
+              title="Panic: Lock & Clear"
+            >
+              <ShieldAlert size={18} />
+            </button>
             <button
               onClick={lock}
               className="btn-icon p-2 hover:bg-red-500/10 hover:text-red-400"
@@ -81,7 +104,7 @@ const VaultContent: React.FC = () => {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
           <input
             type="text"
-            placeholder="Search credentials..."
+            placeholder="Search vault..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="input-glass pl-12"
@@ -95,30 +118,32 @@ const VaultContent: React.FC = () => {
         className="btn-primary w-full mb-6 flex items-center justify-center gap-2"
       >
         <Plus size={20} />
-        Add New Credential
+        Add New Item
       </button>
 
-      {/* Password List */}
+      {/* Item List */}
       {loading ? (
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary-500 border-t-transparent"></div>
         </div>
       ) : filteredRecords.length === 0 ? (
         <div className="glass-card p-12 text-center">
-          <Lock size={48} className="mx-auto mb-4 text-slate-600" />
+          <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-white/10">
+            <Lock size={32} className="text-slate-600" />
+          </div>
           <h3 className="text-xl font-semibold text-slate-300 mb-2">
-            {searchQuery ? 'No credentials found' : 'No credentials yet'}
+            {searchQuery ? 'No items found' : 'Vault is empty'}
           </h3>
-          <p className="text-slate-500">
+          <p className="text-slate-500 text-sm">
             {searchQuery
               ? 'Try a different search term'
-              : 'Click "Add New Credential" to get started'}
+              : 'Securely store logins, notes, identities, and cards.'}
           </p>
         </div>
       ) : (
         <div className="space-y-4 custom-scrollbar max-h-[500px] overflow-y-auto pr-2">
           {filteredRecords.map((record) => (
-            <PasswordCard
+            <VaultItemCard
               key={record.id}
               record={record}
               onEdit={handleEdit}
@@ -128,14 +153,12 @@ const VaultContent: React.FC = () => {
         </div>
       )}
 
-      <PasswordModal
+      <VaultItemModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
-        onSave={handleAddRecord}
+        onSave={handleSaveRecord}
         editRecord={editingRecord}
       />
-
-
     </div>
   );
 };

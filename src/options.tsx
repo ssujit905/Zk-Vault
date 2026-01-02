@@ -6,6 +6,8 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { VaultProvider, useVault } from './context/VaultContext';
 import { LoginScreen } from './components/auth/LoginScreen';
 import { auditVault, type AuditResult } from './utils/passwordAudit';
+import { StatusPanel } from './components/StatusPanel';
+import { createEncryptedBackup, restoreFromEncryptedBackup } from './utils/backup';
 
 const SecurityAudit: React.FC = () => {
     const { records } = useVault();
@@ -86,6 +88,7 @@ const SecurityAudit: React.FC = () => {
         </div>
     );
 };
+
 const SecuritySettings: React.FC = () => {
     const { changeMasterPassword } = useAuth();
     const [oldPassword, setOldPassword] = useState('');
@@ -168,7 +171,7 @@ const SecuritySettings: React.FC = () => {
 
                 {msg.text && (
                     <div className={`p-3 rounded-lg text-sm ${msg.type === 'success' ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
-                            'bg-red-500/10 text-red-400 border border-red-500/20'
+                        'bg-red-500/10 text-red-400 border border-red-500/20'
                         }`}>
                         {msg.text}
                     </div>
@@ -210,6 +213,34 @@ const DataManagement: React.FC = () => {
         setTimeout(() => setStatusMsg(''), 3000);
     };
 
+    const handleEncryptedExport = async () => {
+        const password = prompt('Enter a password to encrypt this backup. You will need this password to restore the data.');
+        if (!password) return;
+
+        try {
+            setImporting(true);
+            const backup = await createEncryptedBackup(records, password);
+            const dataStr = JSON.stringify(backup, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `zk-vault-encrypted-backup-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            setStatusMsg('Secure encrypted backup created successfully.');
+        } catch (error: any) {
+            setStatusMsg(`Backup failed: ${error.message}`);
+        } finally {
+            setImporting(false);
+            setTimeout(() => setStatusMsg(''), 5000);
+        }
+    };
+
     const handleImportClick = () => {
         fileInputRef.current?.click();
     };
@@ -218,7 +249,6 @@ const DataManagement: React.FC = () => {
         const lines = text.split(/\r?\n/).filter(line => line.trim());
         if (lines.length === 0) return [];
 
-        // Simple CSV parser that handles quotes
         const parseLine = (line: string) => {
             const values = [];
             let inQuote = false;
@@ -241,7 +271,6 @@ const DataManagement: React.FC = () => {
         const headers = parseLine(lines[0].toLowerCase());
         const maps: Record<string, number> = {};
 
-        // Map common column names
         headers.forEach((h, i) => {
             if (h.includes('title') || h.includes('name') || h.includes('site')) maps.title = i;
             if (h.includes('url') || h.includes('link') || h.includes('web')) maps.url = i;
@@ -250,14 +279,15 @@ const DataManagement: React.FC = () => {
             if (h.includes('note')) maps.notes = i;
         });
 
-        if (maps.title === undefined && maps.url !== undefined) maps.title = maps.url; // Fallback
+        if (maps.title === undefined && maps.url !== undefined) maps.title = maps.url;
 
-        const records = [];
+        const results = [];
         for (let i = 1; i < lines.length; i++) {
             const cols = parseLine(lines[i]);
             if (cols.length < 2) continue;
 
             const record: any = {
+                type: 'login',
                 title: maps.title !== undefined ? cols[maps.title] : (maps.url !== undefined ? new URL(cols[maps.url]).hostname : 'Imported'),
                 username: maps.username !== undefined ? cols[maps.username] : '',
                 password: maps.password !== undefined ? cols[maps.password] : '',
@@ -265,12 +295,11 @@ const DataManagement: React.FC = () => {
                 notes: maps.notes !== undefined ? cols[maps.notes] : ''
             };
 
-            // Only add if we have at least password and (title or username)
             if (record.password && (record.title || record.username)) {
-                records.push(record);
+                results.push(record);
             }
         }
-        return records;
+        return results;
     };
 
     const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -288,46 +317,49 @@ const DataManagement: React.FC = () => {
 
                 if (file.name.endsWith('.json')) {
                     try {
-                        importedRecords = JSON.parse(content);
+                        const data = JSON.parse(content);
+                        if (data.ciphertext && data.salt && data.iv) {
+                            const password = prompt('Enter the password used to encrypt this backup:');
+                            if (!password) {
+                                setImporting(false);
+                                setStatusMsg('Restore cancelled.');
+                                return;
+                            }
+                            importedRecords = await restoreFromEncryptedBackup(data, password);
+                        } else {
+                            importedRecords = data;
+                        }
                     } catch (parseError) {
-                        throw new Error('Invalid JSON file');
+                        throw new Error('Invalid JSON file or incorrect backup password');
                     }
                 } else if (file.name.endsWith('.csv')) {
-                    try {
-                        importedRecords = parseCSV(content);
-                    } catch (parseError) {
-                        throw new Error('Error parsing CSV file');
-                    }
+                    importedRecords = parseCSV(content);
                 } else {
-                    throw new Error('Unsupported file type. Use JSON or CSV.');
+                    throw new Error('Unsupported file type');
                 }
 
                 if (!Array.isArray(importedRecords)) {
                     throw new Error('Import data must be an array of records');
                 }
 
-                const recordsToAdd = [];
-                for (const item of importedRecords) {
-                    // Basic validation
-                    if ((item.title || item.url) && item.password) {
-                        recordsToAdd.push({
-                            title: item.title || item.url || 'Untitled',
-                            username: item.username || '',
-                            password: item.password,
-                            url: item.url || '',
-                            notes: item.notes || ''
-                        });
-                    }
-                }
+                const recordsToAdd = importedRecords.map(item => ({
+                    type: item.type || 'login',
+                    title: item.title || item.url || 'Untitled',
+                    username: item.username || '',
+                    password: item.password || '',
+                    url: item.url || '',
+                    content: item.content || '',
+                    notes: item.notes || '',
+                    ...item
+                }));
 
                 if (recordsToAdd.length > 0) {
                     await addRecords(recordsToAdd);
-                    setStatusMsg(`Successfully imported ${recordsToAdd.length} credentials.`);
+                    setStatusMsg(`Successfully imported ${recordsToAdd.length} records.`);
                 } else {
-                    setStatusMsg('No valid credentials found to import.');
+                    setStatusMsg('No valid records found to import.');
                 }
             } catch (error: any) {
-                console.error('Import failed:', error);
                 setStatusMsg(`Import failed: ${error.message}`);
             } finally {
                 setImporting(false);
@@ -356,37 +388,41 @@ const DataManagement: React.FC = () => {
                     <div>
                         <h3 className="text-lg font-medium text-slate-200 mb-2">Export Vault</h3>
                         <p className="text-sm text-slate-400 mb-3">
-                            Download your decrypted vault data as a JSON file. Keep this file secure!
+                            Keep your data safe with scheduled encrypted backups.
                         </p>
-                        <button
-                            onClick={handleExport}
-                            className="btn-secondary flex items-center gap-2"
-                            disabled={vaultLoading}
-                        >
-                            <Download size={18} />
-                            Export Data
-                        </button>
+                        <div className="flex flex-col md:flex-row gap-3">
+                            <button
+                                onClick={handleEncryptedExport}
+                                className="btn-primary flex items-center justify-center gap-2"
+                                disabled={vaultLoading || importing}
+                            >
+                                <Lock size={18} />
+                                Encrypted Backup (Secure)
+                            </button>
+                            <button
+                                onClick={handleExport}
+                                className="btn-secondary flex items-center justify-center gap-2"
+                                disabled={vaultLoading || importing}
+                            >
+                                <Download size={18} />
+                                Export JSON (Plaintext)
+                            </button>
+                        </div>
                     </div>
 
                     <div className="border-t border-white/5 pt-4">
-                        <h3 className="text-lg font-medium text-slate-200 mb-2">Import Vault</h3>
+                        <h3 className="text-lg font-medium text-slate-200 mb-2">Import & Restore</h3>
                         <p className="text-sm text-slate-400 mb-3">
-                            Import credentials from a JSON or CSV file. Supports generic CSV exports from other managers.
+                            Restore from a Zk Vault backup or import from generic files.
                         </p>
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            onChange={handleFileChange}
-                            accept=".json,.csv"
-                            className="hidden"
-                        />
+                        <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".json,.csv" className="hidden" />
                         <button
                             onClick={handleImportClick}
                             className="btn-secondary flex items-center gap-2"
                             disabled={importing || vaultLoading}
                         >
                             <Upload size={18} />
-                            {importing ? 'Importing...' : 'Import Data'}
+                            {importing ? 'Processing...' : 'Import / Restore Data'}
                         </button>
                     </div>
                 </div>
@@ -397,30 +433,30 @@ const DataManagement: React.FC = () => {
                     <AlertTriangle className="text-red-400" size={24} />
                     <h2 className="text-2xl font-semibold text-red-400">Danger Zone</h2>
                 </div>
-                <div>
-                    <h3 className="text-lg font-medium text-slate-200 mb-2">Clear All Data</h3>
-                    <p className="text-sm text-slate-400 mb-3">
-                        Permanently delete all passwords from your vault on this device. This action cannot be undone.
-                    </p>
-                    <button
-                        className="btn-danger flex items-center gap-2"
-                        onClick={() => {
-                            if (confirm('WARNING: Are you sure you want to delete ALL data? This cannot be undone.')) {
-                                chrome.storage.local.clear(() => {
-                                    alert('All data cleared. The extension will now reload.');
-                                    chrome.runtime.reload();
-                                });
-                            }
-                        }}
-                    >
-                        <Trash2 size={18} />
-                        Clear Vault
-                    </button>
-                </div>
+                <button
+                    className="btn-danger flex items-center gap-2"
+                    onClick={() => {
+                        if (confirm('WARNING: Permanently delete ALL data?')) {
+                            chrome.storage.local.clear(() => chrome.runtime.reload());
+                        }
+                    }}
+                >
+                    <Trash2 size={18} />
+                    Clear Vault
+                </button>
             </div>
 
-            <div className="mt-8">
-                <button onClick={lock} className="btn-secondary w-full">Logout</button>
+            <div className="mt-8 flex gap-4">
+                <button onClick={lock} className="btn-secondary flex-1">Logout</button>
+                <button
+                    onClick={() => {
+                        lock();
+                        chrome.runtime.sendMessage({ type: 'SCHEDULE_CLIPBOARD_CLEAR' });
+                    }}
+                    className="btn-danger flex-1 bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500 hover:text-white transition-all"
+                >
+                    Panic Lock (Immediate)
+                </button>
             </div>
         </div>
     );
@@ -429,26 +465,21 @@ const DataManagement: React.FC = () => {
 const OptionsContent: React.FC = () => {
     const { isAuthenticated, loading } = useAuth();
 
-    if (loading) {
-        return (
-            <div className="min-h-screen w-full flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary-500 border-t-transparent"></div>
-            </div>
-        );
-    }
+    if (loading) return (
+        <div className="min-h-screen w-full flex items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary-500 border-t-transparent"></div>
+        </div>
+    );
 
-    if (!isAuthenticated) {
-        return (
-            <div className="max-w-md mx-auto mt-20">
-                <LoginScreen />
-            </div>
-        );
-    }
+    if (!isAuthenticated) return (
+        <div className="max-w-md mx-auto mt-20">
+            <LoginScreen />
+        </div>
+    );
 
     return (
         <div className="min-h-screen w-full p-8 pb-20">
             <div className="max-w-4xl mx-auto">
-                {/* Header */}
                 <div className="mb-8 flex items-center gap-4">
                     <img src="/icons/icon128.png" className="w-16 h-16 drop-shadow-lg" alt="Logo" />
                     <div>
@@ -458,10 +489,10 @@ const OptionsContent: React.FC = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    {/* Sidebar / Navigation could go here, for now single column layout for main content */}
                     <div className="md:col-span-3">
                         <VaultProvider>
                             <div className="space-y-8">
+                                <StatusPanel />
                                 <SecurityAudit />
                                 <SecuritySettings />
                                 <DataManagement />
@@ -469,15 +500,10 @@ const OptionsContent: React.FC = () => {
                         </VaultProvider>
                     </div>
                 </div>
-
-                {/* Footer Info */}
-                <div className="mt-12 text-center text-slate-500 text-sm">
-                    <p>Zk Vault v1.0.0 • Zero-Knowledge Architecture</p>
-                </div>
             </div>
         </div>
     );
-}
+};
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>

@@ -1,4 +1,4 @@
-import type { PasswordRecord } from '../types';
+import type { VaultRecord } from '../types';
 
 export interface AuditResult {
     score: number; // 0-100
@@ -7,14 +7,22 @@ export interface AuditResult {
     total: number;
 }
 
-export const auditVault = (records: PasswordRecord[]): AuditResult => {
+export const auditVault = (records: VaultRecord[]): AuditResult => {
     let score = 100;
     const weakPasswords: { id: string; title: string; reason: string }[] = [];
     const passwordCounts: Record<string, string[]> = {}; // password -> [ids]
 
+    // Only audit login records
+    const loginRecords = records.filter(r => r.type === 'login');
+
+    if (loginRecords.length === 0) {
+        return { score: 100, weakPasswords: [], reusedPasswords: [], total: 0 };
+    }
+
     // 1. Analyze Passwords
-    records.forEach(record => {
-        const pwd = record.password;
+    loginRecords.forEach(record => {
+        // We know it's a login record now
+        const pwd = (record as any).password || '';
 
         // Strength Check
         let strength = 0;
@@ -34,10 +42,12 @@ export const auditVault = (records: PasswordRecord[]): AuditResult => {
         }
 
         // Reuse Check
-        if (passwordCounts[pwd]) {
-            passwordCounts[pwd].push(record.title);
-        } else {
-            passwordCounts[pwd] = [record.title];
+        if (pwd) {
+            if (passwordCounts[pwd]) {
+                passwordCounts[pwd].push(record.title);
+            } else {
+                passwordCounts[pwd] = [record.title];
+            }
         }
     });
 
@@ -46,10 +56,8 @@ export const auditVault = (records: PasswordRecord[]): AuditResult => {
     Object.entries(passwordCounts).forEach(([_pwd, titles]) => {
         if (titles.length > 1) {
             score -= (titles.length - 1) * 10;
-            // We just list the first occurrence as the "source" or list all?
-            // Let's simplified list: Group by password
             reusedPasswords.push({
-                id: 'reuse-group', // logic ID
+                id: 'reuse-group',
                 title: `${titles.length} accounts use the same password: ${titles.slice(0, 3).join(', ')}${titles.length > 3 ? '...' : ''}`,
                 count: titles.length
             });
@@ -60,6 +68,6 @@ export const auditVault = (records: PasswordRecord[]): AuditResult => {
         score: Math.max(0, score),
         weakPasswords,
         reusedPasswords,
-        total: records.length
+        total: loginRecords.length
     };
 };
