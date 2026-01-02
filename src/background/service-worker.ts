@@ -121,7 +121,30 @@ async function handleMessage(request: any, sendResponse: (response: any) => void
 
                     // Check domain match
                     // data.url vs request.domain
-                    if (data.url && data.url.toLowerCase().includes(request.domain.toLowerCase())) {
+                    // Strict domain matching
+                    const storedUrl = data.url?.toLowerCase() || '';
+                    const currentDomain = request.domain.toLowerCase();
+
+                    let isMatch = false;
+                    try {
+                        let storedHost = '';
+                        if (storedUrl.startsWith('http')) {
+                            storedHost = new URL(storedUrl).hostname;
+                        } else {
+                            storedHost = new URL('https://' + storedUrl).hostname;
+                        }
+
+                        if (storedHost === currentDomain ||
+                            storedHost.endsWith('.' + currentDomain) ||
+                            currentDomain.endsWith('.' + storedHost)) {
+                            isMatch = true;
+                        }
+                    } catch (e) {
+                        // Fallback if URL is malformed
+                        isMatch = storedUrl === currentDomain;
+                    }
+
+                    if (isMatch) {
                         matches.push({
                             title: data.title,
                             username: data.username,
@@ -167,3 +190,13 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     }
 });
 
+// Listen for idle state changes (Auto-locking)
+chrome.idle.setDetectionInterval(60); // 1 minute
+chrome.idle.onStateChanged.addListener(async (state) => {
+    if (state === 'locked' || state === 'idle') {
+        await chrome.storage.session.remove('masterKey');
+        chrome.runtime.sendMessage({ type: 'VAULT_LOCKED_MSG' }).catch(() => {
+            // No one listening? No problem.
+        });
+    }
+});

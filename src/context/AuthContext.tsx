@@ -10,6 +10,7 @@ interface AuthContextType {
     lock: () => void;
     unlock: (password: string) => Promise<boolean>;
     setupVault: (password: string) => Promise<void>;
+    changeMasterPassword: (oldPassword: string, newPassword: string) => Promise<boolean>;
     masterKey: CryptoKey | null;
 }
 
@@ -23,6 +24,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     useEffect(() => {
         checkVaultStatus();
+
+        const handleMessage = (message: any) => {
+            if (message.type === 'VAULT_LOCKED_MSG') {
+                setIsAuthenticated(false);
+                setMasterKey(null);
+            }
+        };
+
+        chrome.runtime.onMessage.addListener(handleMessage);
+        return () => chrome.runtime.onMessage.removeListener(handleMessage);
     }, []);
 
     const checkVaultStatus = async () => {
@@ -109,6 +120,74 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
 
+    const changeMasterPassword = async (oldPassword: string, newPassword: string): Promise<boolean> => {
+        try {
+            const vaultData = await storageService.loadVaultData();
+            if (!vaultData || !vaultData.security) return false;
+
+            // 1. Verify old password
+            const oldSalt = Uint8Array.from(atob(vaultData.security.salt), c => c.charCodeAt(0));
+            const oldKey = await cryptoService.deriveKey(oldPassword, oldSalt);
+
+            const validation = vaultData.security.validation;
+            const decryptedValidation = await cryptoService.decrypt(
+                validation.ciphertext,
+                validation.iv,
+                oldKey
+            );
+
+            if (decryptedValidation !== 'VALID') {
+                return false;
+            }
+
+            // 2. Derive new key
+            const newSalt = cryptoService.generateSalt();
+            const newSaltString = btoa(String.fromCharCode(...newSalt));
+            const newKey = await cryptoService.deriveKey(newPassword, newSalt);
+
+            // 3. Re-encrypt all records
+            const reEncryptedRecords = await Promise.all(vaultData.records.map(async (record) => {
+                const decryptedData = await cryptoService.decrypt(
+                    record.encryptedData.ciphertext,
+                    record.encryptedData.iv,
+                    oldKey
+                );
+                const newEncryptedData = await cryptoService.encrypt(decryptedData, newKey);
+                return {
+                    ...record,
+                    encryptedData: newEncryptedData,
+                    updatedAt: Date.now()
+                };
+            }));
+
+            // 4. Create new validation
+            const newValidation = await cryptoService.encrypt('VALID', newKey);
+
+            // 5. Save everything
+            const updatedVaultData: VaultData = {
+                ...vaultData,
+                security: {
+                    salt: newSaltString,
+                    validation: newValidation,
+                },
+                records: reEncryptedRecords,
+                version: vaultData.version
+            };
+
+            await storageService.saveVaultData(updatedVaultData);
+
+            // 6. Update session
+            const exportedKey = await crypto.subtle.exportKey('jwk', newKey);
+            await chrome.storage.session.set({ masterKey: exportedKey });
+            setMasterKey(newKey);
+
+            return true;
+        } catch (error) {
+            console.error('Failed to change master password:', error);
+            return false;
+        }
+    };
+
     const lock = () => {
         chrome.storage.session.remove('masterKey');
         setMasterKey(null);
@@ -124,6 +203,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 lock,
                 unlock,
                 setupVault,
+                changeMasterPassword,
                 masterKey,
             }}
         >

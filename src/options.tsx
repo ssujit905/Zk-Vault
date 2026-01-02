@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
-import { Download, Upload, Trash2, AlertTriangle, Shield, CheckCircle } from 'lucide-react';
+import { Download, Upload, Trash2, AlertTriangle, Shield, CheckCircle, Lock } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { VaultProvider, useVault } from './context/VaultContext';
 import { LoginScreen } from './components/auth/LoginScreen';
@@ -83,6 +83,105 @@ const SecurityAudit: React.FC = () => {
                     </div>
                 )}
             </div>
+        </div>
+    );
+};
+const SecuritySettings: React.FC = () => {
+    const { changeMasterPassword } = useAuth();
+    const [oldPassword, setOldPassword] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [msg, setMsg] = useState({ type: '', text: '' });
+
+    const handlePasswordChange = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (newPassword !== confirmPassword) {
+            setMsg({ type: 'error', text: 'New passwords do not match.' });
+            return;
+        }
+
+        if (newPassword.length < 8) {
+            setMsg({ type: 'error', text: 'New password must be at least 8 characters.' });
+            return;
+        }
+
+        setLoading(true);
+        setMsg({ type: '', text: '' });
+
+        const success = await changeMasterPassword(oldPassword, newPassword);
+
+        setLoading(false);
+        if (success) {
+            setMsg({ type: 'success', text: 'Master password updated successfully and vault re-encrypted.' });
+            setOldPassword('');
+            setNewPassword('');
+            setConfirmPassword('');
+        } else {
+            setMsg({ type: 'error', text: 'Failed to update password. Please check your current password.' });
+        }
+
+        setTimeout(() => setMsg({ type: '', text: '' }), 5000);
+    };
+
+    return (
+        <div className="glass-card p-6">
+            <div className="flex items-center gap-3 mb-6">
+                <Lock className="text-primary-400" size={24} />
+                <h2 className="text-2xl font-semibold text-white">Security Settings</h2>
+            </div>
+
+            <form onSubmit={handlePasswordChange} className="space-y-4">
+                <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-1">Current Master Password</label>
+                    <input
+                        type="password"
+                        value={oldPassword}
+                        onChange={(e) => setOldPassword(e.target.value)}
+                        className="input-glass w-full"
+                        required
+                    />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">New Master Password</label>
+                        <input
+                            type="password"
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            className="input-glass w-full"
+                            required
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">Confirm New Password</label>
+                        <input
+                            type="password"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            className="input-glass w-full"
+                            required
+                        />
+                    </div>
+                </div>
+
+                {msg.text && (
+                    <div className={`p-3 rounded-lg text-sm ${msg.type === 'success' ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
+                            'bg-red-500/10 text-red-400 border border-red-500/20'
+                        }`}>
+                        {msg.text}
+                    </div>
+                )}
+
+                <button
+                    type="submit"
+                    disabled={loading}
+                    className="btn-primary w-full md:w-auto"
+                >
+                    {loading ? 'Re-encrypting Vault...' : 'Change Master Password'}
+                </button>
+            </form>
         </div>
     );
 };
@@ -364,6 +463,7 @@ const OptionsContent: React.FC = () => {
                         <VaultProvider>
                             <div className="space-y-8">
                                 <SecurityAudit />
+                                <SecuritySettings />
                                 <DataManagement />
                             </div>
                         </VaultProvider>
