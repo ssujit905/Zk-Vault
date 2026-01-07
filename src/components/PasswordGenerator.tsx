@@ -36,14 +36,14 @@ export const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ onSelect }
         }
 
         setGenerated(result);
+        onSelect(result); // Automatically update the password field
     };
 
     useEffect(() => {
         generate();
     }, [length, useSymbols, useNumbers, useUppercase]);
 
-    const copyAndSelect = () => {
-        onSelect(generated);
+    const copyToClipboard = () => {
         navigator.clipboard.writeText(generated);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
@@ -78,6 +78,7 @@ export const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ onSelect }
                     {generated}
                 </div>
                 <button
+                    type="button"
                     onClick={generate}
                     className="p-2 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-colors"
                     title="Regenerate"
@@ -85,9 +86,10 @@ export const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ onSelect }
                     <RefreshCw size={18} />
                 </button>
                 <button
-                    onClick={copyAndSelect}
+                    type="button"
+                    onClick={copyToClipboard}
                     className="p-2 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-colors"
-                    title="Use & Copy"
+                    title="Copy to Clipboard"
                 >
                     {copied ? <Check size={18} className="text-green-400" /> : <Copy size={18} />}
                 </button>
