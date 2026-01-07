@@ -70,7 +70,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 throw new Error('Vault data corrupted or missing');
             }
 
-            const salt = Uint8Array.from(atob(vaultData.security.salt), c => c.charCodeAt(0));
+            const saltStr = atob(vaultData.security.salt);
+            const salt = new Uint8Array(saltStr.length);
+            for (let i = 0; i < saltStr.length; i++) {
+                salt[i] = saltStr.charCodeAt(i);
+            }
             const key = await cryptoService.deriveKey(password, salt);
             const validation = vaultData.security.validation;
             const decryptedValidation = await cryptoService.decrypt(
@@ -131,7 +135,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const vaultData = await storageService.loadVaultData();
             if (!vaultData || !vaultData.security) return false;
 
-            const oldSalt = Uint8Array.from(atob(vaultData.security.salt), c => c.charCodeAt(0));
+            const saltStr = atob(vaultData.security.salt);
+            const oldSalt = new Uint8Array(saltStr.length);
+            for (let i = 0; i < saltStr.length; i++) {
+                oldSalt[i] = saltStr.charCodeAt(i);
+            }
             const oldKey = await cryptoService.deriveKey(oldPassword, oldSalt);
 
             const validation = vaultData.security.validation;
