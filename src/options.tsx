@@ -729,9 +729,7 @@ const OptionsContent: React.FC = () => {
                 </div>
 
                 <div className="animate-fade-in">
-                    <VaultProvider>
-                        {renderView()}
-                    </VaultProvider>
+                    {renderView()}
                 </div>
             </main>
 
@@ -749,7 +747,9 @@ const OptionsContent: React.FC = () => {
 ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
         <AuthProvider>
-            <OptionsContent />
+            <VaultProvider>
+                <OptionsContent />
+            </VaultProvider>
         </AuthProvider>
     </React.StrictMode>
 );
