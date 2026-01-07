@@ -222,7 +222,7 @@ async function handleMessage(request: any, sender: chrome.runtime.MessageSender,
     }
 
     if (request.type === 'OPEN_OPTIONS') {
-        const url = chrome.runtime.getURL('src/options.html');
+        const url = chrome.runtime.getURL('options.html');
         const hash = request.hash ? `#${request.hash}` : '';
         chrome.tabs.create({ url: `${url}${hash}` });
         sendResponse({ status: 'OK' });

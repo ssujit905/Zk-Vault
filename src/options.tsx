@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import {
-    Shield, CheckCircle, Lock, Crown, Zap, Database, Key, Users, Heart,
+    Shield, CheckCircle, Lock, Crown, Zap, Database, Users, Heart,
     ShieldAlert, ShieldCheck, Upload, LogOut, AlertTriangle, X,
     Settings, CreditCard, HardDrive
 } from 'lucide-react';
@@ -650,6 +650,7 @@ const OptionsContent: React.FC = () => {
 
     const updateView = (view: string) => {
         window.location.hash = view;
+        setActiveView(view);
         setIsDropdownOpen(false);
     };
 
@@ -690,11 +691,7 @@ const OptionsContent: React.FC = () => {
             <header className="sticky top-0 z-50 w-full bg-[#02040a]/80 backdrop-blur-2xl border-b border-white/[0.03]">
                 <div className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
                     <div className="flex items-center gap-4 cursor-pointer group" onClick={() => updateView('dashboard')}>
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-600 to-indigo-700 p-[1px] shadow-lg shadow-primary-900/20 group-hover:scale-110 transition-transform">
-                            <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
-                                <Shield className="text-primary-400" size={18} />
-                            </div>
-                        </div>
+                        <img src="/icons/icon48.png" alt="Zk Vault" className="w-10 h-10 drop-shadow-md group-hover:scale-110 transition-transform" />
                         <span className="text-xl font-black text-white tracking-tight uppercase hidden sm:block">Zk Vault</span>
                     </div>
 
@@ -727,15 +724,16 @@ const OptionsContent: React.FC = () => {
 
                                 <div className="space-y-1">
                                     {[
-                                        { id: 'dashboard', label: 'Main Dashboard', icon: Shield },
+                                        { id: 'dashboard', label: 'Main Dashboard', icon: ShieldCheck },
                                         { id: 'audit', label: 'Security Audit', icon: ShieldCheck },
                                         { id: 'family', label: 'Family Center', icon: Users },
-                                        { id: 'password', label: 'Master Password', icon: Key },
-                                        { id: 'data', label: 'Import & Export', icon: HardDrive },
+                                        { id: 'password', label: 'Update Password', icon: Lock },
+                                        { id: 'data', label: 'Export Backup', icon: HardDrive },
+                                        { id: 'data', label: 'Import Data', icon: Upload },
                                         { id: 'billing', label: 'Subscription', icon: CreditCard },
-                                    ].map(item => (
+                                    ].map((item, idx) => (
                                         <button
-                                            key={item.id}
+                                            key={`${item.id}-${idx}`}
                                             onClick={() => updateView(item.id)}
                                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all ${activeView === item.id ? 'bg-primary-500/10 text-primary-400' : 'text-slate-400 hover:bg-white/5 hover:text-white'
                                                 }`}

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Plus, Search, Lock, Settings, Crown, Zap, ShieldCheck, Users, HardDrive, Shield } from 'lucide-react';
+import { Plus, Search, Lock, Settings, Crown, Zap, ShieldCheck, Users, HardDrive } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { VaultProvider, useVault } from './context/VaultContext';
 import { VaultItemCard } from './components/VaultItemCard';
@@ -81,11 +81,7 @@ const VaultContent: React.FC = () => {
       <div className="mb-8 relative">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-600 to-indigo-700 p-[1px] shadow-lg shadow-primary-900/20">
-              <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
-                <Shield className="text-primary-400" size={18} />
-              </div>
-            </div>
+            <img src="/icons/icon48.png" alt="Zk Vault" className="w-10 h-10 drop-shadow-md" />
             <div>
               <h1 className="text-2xl font-black text-white tracking-widest uppercase">Zk Vault</h1>
             </div>
@@ -93,10 +89,10 @@ const VaultContent: React.FC = () => {
 
           <div className="flex items-center gap-2 relative" ref={dropdownRef}>
             <div
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[9px] font-black uppercase tracking-widest ${tier === 'free' ? 'border-amber-500/20 text-amber-500 bg-amber-500/5' :
-                tier === 'pro' ? 'border-amber-500 text-amber-500 bg-amber-500/5' :
-                  'border-primary-500 text-primary-400 bg-primary-500/5'
-                }`}
+              className={`flex items - center gap - 1.5 px - 3 py - 1.5 rounded - full border text - [9px] font - black uppercase tracking - widest ${tier === 'free' ? 'border-amber-500/20 text-amber-500 bg-amber-500/5' :
+                  tier === 'pro' ? 'border-amber-500 text-amber-500 bg-amber-500/5' :
+                    'border-primary-500 text-primary-400 bg-primary-500/5'
+                } `}
             >
               {tier !== 'free' ? <Crown size={12} /> : <Zap size={12} className="animate-pulse" />}
               {tier}
@@ -104,7 +100,7 @@ const VaultContent: React.FC = () => {
 
             <button
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className={`p-2 rounded-xl transition-all ${isDropdownOpen ? 'bg-primary-500/10 text-primary-400 ring-1 ring-primary-400/50' : 'text-slate-500 hover:text-white'}`}
+              className={`p - 2 rounded - xl transition - all ${isDropdownOpen ? 'bg-primary-500/10 text-primary-400 ring-1 ring-primary-400/50' : 'text-slate-500 hover:text-white'} `}
             >
               <Settings size={20} className={isDropdownOpen ? 'animate-spin-slow' : ''} />
             </button>
@@ -118,11 +114,13 @@ const VaultContent: React.FC = () => {
                   {[
                     { label: 'Security Audit', icon: ShieldCheck, hash: 'audit' },
                     { label: 'Family Sharing', icon: Users, hash: 'family' },
-                    { label: 'Vault Data', icon: HardDrive, hash: 'data' },
+                    { label: 'Update Password', icon: Lock, hash: 'password' },
+                    { label: 'Export Backup', icon: HardDrive, hash: 'data' },
+                    { label: 'Import Data', icon: ShieldCheck, hash: 'data' },
                     { label: 'Subscription', icon: Crown, hash: 'billing' },
                   ].map(item => (
                     <button
-                      key={item.hash}
+                      key={`${item.label} -${item.hash} `}
                       onClick={() => openOptions(item.hash)}
                       className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:bg-white/5 hover:text-white transition-all"
                     >
