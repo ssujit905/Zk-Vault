@@ -87,7 +87,7 @@ const VaultContent: React.FC = () => {
               </div>
             </div>
             <div>
-              <h1 className="text-2xl font-black text-white tracking-widest uppercase">Vault</h1>
+              <h1 className="text-2xl font-black text-white tracking-widest uppercase">Zk Vault</h1>
             </div>
           </div>
 
