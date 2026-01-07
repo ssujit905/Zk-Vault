@@ -70,12 +70,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 throw new Error('Vault data corrupted or missing');
             }
 
-            const saltStr = atob(vaultData.security.salt);
-            const salt = new Uint8Array(saltStr.length);
-            for (let i = 0; i < saltStr.length; i++) {
-                salt[i] = saltStr.charCodeAt(i);
-            }
-            const key = await cryptoService.deriveKey(password, salt);
+            const saltBytes = atob(vaultData.security.salt);
+            const salt = Uint8Array.from(saltBytes, c => c.charCodeAt(0));
+            const key = await cryptoService.deriveKey(password.trim(), salt);
             const validation = vaultData.security.validation;
             const decryptedValidation = await cryptoService.decrypt(
                 validation.ciphertext,
@@ -83,7 +80,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 key
             );
 
-            if (decryptedValidation === 'VALID') {
+            if (decryptedValidation.trim() === 'VALID') {
                 const exportedKey = await crypto.subtle.exportKey('jwk', key);
                 await chrome.storage.session.set({ masterKey: exportedKey });
 
@@ -135,12 +132,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const vaultData = await storageService.loadVaultData();
             if (!vaultData || !vaultData.security) return false;
 
-            const saltStr = atob(vaultData.security.salt);
-            const oldSalt = new Uint8Array(saltStr.length);
-            for (let i = 0; i < saltStr.length; i++) {
-                oldSalt[i] = saltStr.charCodeAt(i);
-            }
-            const oldKey = await cryptoService.deriveKey(oldPassword, oldSalt);
+            const oldSaltStr = atob(vaultData.security.salt);
+            const oldSalt = Uint8Array.from(oldSaltStr, c => c.charCodeAt(0));
+            const oldKey = await cryptoService.deriveKey(oldPassword.trim(), oldSalt);
 
             const validation = vaultData.security.validation;
             const decryptedValidation = await cryptoService.decrypt(
@@ -149,7 +143,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 oldKey
             );
 
-            if (decryptedValidation !== 'VALID') return false;
+            if (decryptedValidation.trim() !== 'VALID') return false;
 
             const newSalt = cryptoService.generateSalt();
             const newSaltString = btoa(String.fromCharCode(...newSalt));

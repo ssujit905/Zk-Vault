@@ -121,20 +121,13 @@ export class CryptoService {
      * Helper: Base64 to ArrayBuffer
      */
     private base64ToArrayBuffer(base64: string): ArrayBuffer {
-        const binary_string = window.atob(base64);
-        const len = binary_string.length;
-        const bytes = new Uint8Array(len);
-        for (let i = 0; i < len; i++) {
-            bytes[i] = binary_string.charCodeAt(i);
-        }
-        return bytes.buffer as ArrayBuffer;
+        const binaryString = window.atob(base64);
+        return Uint8Array.from(binaryString, c => c.charCodeAt(0)).buffer as ArrayBuffer;
     }
 
-    /**
-     * Helper: Base64 to Uint8Array
-     */
     private base64ToUint8Array(base64: string): Uint8Array {
-        return new Uint8Array(this.base64ToArrayBuffer(base64));
+        const binaryString = window.atob(base64);
+        return Uint8Array.from(binaryString, c => c.charCodeAt(0));
     }
 
     /**
