@@ -1,4 +1,4 @@
-import type { VaultData, StorageData } from '../types';
+import type { VaultData, StorageData, UserTier, FamilyMember } from '../types';
 
 const STORAGE_KEY = 'zk_vault_data';
 
@@ -7,17 +7,14 @@ class StorageService {
      * Save full vault data to chrome.storage.local
      */
     async saveVaultData(vaultData: VaultData): Promise<void> {
-        const storageData: StorageData = {
-            vault: vaultData,
-        };
-
         return new Promise((resolve, reject) => {
-            chrome.storage.local.set({ [STORAGE_KEY]: storageData }, () => {
-                if (chrome.runtime.lastError) {
-                    reject(chrome.runtime.lastError);
-                } else {
-                    resolve();
-                }
+            chrome.storage.local.get([STORAGE_KEY], (result) => {
+                const storageData = (result[STORAGE_KEY] || {}) as StorageData;
+                storageData.vault = vaultData;
+                chrome.storage.local.set({ [STORAGE_KEY]: storageData }, () => {
+                    if (chrome.runtime.lastError) reject(chrome.runtime.lastError);
+                    else resolve();
+                });
             });
         });
     }
@@ -57,6 +54,50 @@ class StorageService {
                 } else {
                     resolve();
                 }
+            });
+        });
+    }
+
+    async getTier(): Promise<UserTier> {
+        return new Promise((resolve) => {
+            chrome.storage.local.get([STORAGE_KEY], (result) => {
+                const storageData = result[STORAGE_KEY] as StorageData | undefined;
+                resolve(storageData?.tier || 'free');
+            });
+        });
+    }
+
+    async setTier(tier: UserTier): Promise<void> {
+        return new Promise((resolve, reject) => {
+            chrome.storage.local.get([STORAGE_KEY], (result) => {
+                const storageData = (result[STORAGE_KEY] || {}) as StorageData;
+                storageData.tier = tier;
+                chrome.storage.local.set({ [STORAGE_KEY]: storageData }, () => {
+                    if (chrome.runtime.lastError) reject(chrome.runtime.lastError);
+                    else resolve();
+                });
+            });
+        });
+    }
+
+    async getFamilyMembers(): Promise<FamilyMember[]> {
+        return new Promise((resolve) => {
+            chrome.storage.local.get([STORAGE_KEY], (result) => {
+                const storageData = result[STORAGE_KEY] as StorageData | undefined;
+                resolve(storageData?.familyMembers || []);
+            });
+        });
+    }
+
+    async saveFamilyMembers(members: FamilyMember[]): Promise<void> {
+        return new Promise((resolve, reject) => {
+            chrome.storage.local.get([STORAGE_KEY], (result) => {
+                const storageData = (result[STORAGE_KEY] || {}) as StorageData;
+                storageData.familyMembers = members;
+                chrome.storage.local.set({ [STORAGE_KEY]: storageData }, () => {
+                    if (chrome.runtime.lastError) reject(chrome.runtime.lastError);
+                    else resolve();
+                });
             });
         });
     }

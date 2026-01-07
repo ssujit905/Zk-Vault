@@ -1,3 +1,4 @@
+export type UserTier = 'free' | 'pro' | 'family';
 export type VaultItemType = 'login' | 'note' | 'identity' | 'card';
 
 // Decrypted record (in-memory only)
@@ -76,6 +77,18 @@ export interface VaultData {
 export interface StorageData {
     vault?: VaultData;
     settings?: UserSettings;
+    tier?: UserTier;
+    familyMembers?: FamilyMember[];
+}
+
+export interface FamilyMember {
+    id: string;
+    name: string;
+    email: string;
+    status: 'pending' | 'active';
+    role: 'admin' | 'member';
+    emergencyAccess: boolean;
+    addedAt: number;
 }
 
 export interface UserSettings {

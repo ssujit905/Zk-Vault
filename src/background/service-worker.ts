@@ -174,6 +174,36 @@ async function handleMessage(request: any, sender: chrome.runtime.MessageSender,
                 }
             }
 
+            // 5. Tier Check: Limit Free Tier to 3 unique domains per month
+            const storageResult = await chrome.storage.local.get('zk_vault_data');
+            const tier = (storageResult['zk_vault_data'] as any)?.tier || 'free';
+
+            if (tier === 'free' && matches.length > 0) {
+                const now = new Date();
+                const currentMonth = `${now.getFullYear()}-${now.getMonth()}`;
+
+                const usageResult = await chrome.storage.local.get('autofill_usage');
+                let usage = (usageResult.autofill_usage as any) || { month: currentMonth, domains: [] };
+
+                // Reset if new month
+                if (usage.month !== currentMonth) {
+                    usage = { month: currentMonth, domains: [] };
+                }
+
+                if (!usage.domains.includes(request.domain)) {
+                    if (usage.domains.length >= 3) {
+                        sendResponse({
+                            status: 'LIMIT_REACHED',
+                            message: 'Monthly Free Tier limit reached (3 unique domains). Upgrade to Pro for unlimited autofill across all your sites.'
+                        });
+                        return;
+                    }
+                    // Record new domain use
+                    usage.domains.push(request.domain);
+                    await chrome.storage.local.set({ autofill_usage: usage });
+                }
+            }
+
             sendResponse({ status: 'OK', credentials: matches });
 
         } catch (e) {

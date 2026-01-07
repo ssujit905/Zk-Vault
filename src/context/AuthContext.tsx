@@ -1,12 +1,14 @@
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { cryptoService } from '../services/crypto';
 import { storageService } from '../services/storage';
-import type { VaultData } from '../types';
+import type { VaultData, UserTier } from '../types';
 
 interface AuthContextType {
     isAuthenticated: boolean;
     hasVault: boolean;
     loading: boolean;
+    tier: UserTier;
+    setTier: (tier: UserTier) => Promise<void>;
     lock: () => void;
     unlock: (password: string) => Promise<boolean>;
     setupVault: (password: string) => Promise<void>;
@@ -21,11 +23,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [hasVault, setHasVault] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [tier, setTierState] = useState<UserTier>('free');
     const [masterKey, setMasterKey] = useState<CryptoKey | null>(null);
     const [lastUnlockAt, setLastUnlockAt] = useState<number | null>(null);
 
     useEffect(() => {
-        checkVaultStatus();
+        const init = async () => {
+            await checkVaultStatus();
+            const currentTier = await storageService.getTier();
+            setTierState(currentTier);
+        };
+        init();
 
         const handleMessage = (message: any) => {
             if (message.type === 'VAULT_LOCKED_MSG') {
@@ -50,6 +58,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
 
+    const updateTier = async (newTier: UserTier) => {
+        await storageService.setTier(newTier);
+        setTierState(newTier);
+    };
+
     const unlock = async (password: string): Promise<boolean> => {
         try {
             const vaultData = await storageService.loadVaultData();
@@ -57,13 +70,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 throw new Error('Vault data corrupted or missing');
             }
 
-            // 1. Decode salt
             const salt = Uint8Array.from(atob(vaultData.security.salt), c => c.charCodeAt(0));
-
-            // 2. Derive key
             const key = await cryptoService.deriveKey(password, salt);
-
-            // 3. Verify key by decrypting validation string
             const validation = vaultData.security.validation;
             const decryptedValidation = await cryptoService.decrypt(
                 validation.ciphertext,
@@ -89,17 +97,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const setupVault = async (password: string) => {
         try {
-            // 1. Generate salt
             const salt = cryptoService.generateSalt();
             const saltString = btoa(String.fromCharCode(...salt));
-
-            // 2. Derive key
             const key = await cryptoService.deriveKey(password, salt);
-
-            // 3. Create validation string
             const validation = await cryptoService.encrypt('VALID', key);
 
-            // 4. Create initial vault data
             const initialVaultData: VaultData = {
                 version: '1.0.0',
                 security: {
@@ -109,7 +111,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 records: [],
             };
 
-            // 5. Save to storage
             await storageService.saveVaultData(initialVaultData);
 
             const exportedKey = await crypto.subtle.exportKey('jwk', key);
@@ -130,7 +131,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const vaultData = await storageService.loadVaultData();
             if (!vaultData || !vaultData.security) return false;
 
-            // 1. Verify old password
             const oldSalt = Uint8Array.from(atob(vaultData.security.salt), c => c.charCodeAt(0));
             const oldKey = await cryptoService.deriveKey(oldPassword, oldSalt);
 
@@ -141,16 +141,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 oldKey
             );
 
-            if (decryptedValidation !== 'VALID') {
-                return false;
-            }
+            if (decryptedValidation !== 'VALID') return false;
 
-            // 2. Derive new key
             const newSalt = cryptoService.generateSalt();
             const newSaltString = btoa(String.fromCharCode(...newSalt));
             const newKey = await cryptoService.deriveKey(newPassword, newSalt);
 
-            // 3. Re-encrypt all records
             const reEncryptedRecords = await Promise.all(vaultData.records.map(async (record) => {
                 const decryptedData = await cryptoService.decrypt(
                     record.encryptedData.ciphertext,
@@ -165,10 +161,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 };
             }));
 
-            // 4. Create new validation
             const newValidation = await cryptoService.encrypt('VALID', newKey);
 
-            // 5. Save everything
             const updatedVaultData: VaultData = {
                 ...vaultData,
                 security: {
@@ -181,7 +175,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
             await storageService.saveVaultData(updatedVaultData);
 
-            // 6. Update session
             const exportedKey = await crypto.subtle.exportKey('jwk', newKey);
             await chrome.storage.session.set({ masterKey: exportedKey });
             setMasterKey(newKey);
@@ -206,6 +199,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 isAuthenticated,
                 hasVault,
                 loading,
+                tier,
+                setTier: updateTier,
                 lock,
                 unlock,
                 setupVault,
