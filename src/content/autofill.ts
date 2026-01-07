@@ -231,6 +231,11 @@ class AutofillManager {
                 return;
             }
 
+            if (response && response.status === 'LIMIT_REACHED') {
+                this.showUpgradeNudge(response.message);
+                return;
+            }
+
             if (response && response.status === 'OK' && response.credentials.length > 0) {
                 this.showDropdown(input, anchor, response.credentials);
             } else if (!icon) {
@@ -240,6 +245,38 @@ class AutofillManager {
         } catch (e) {
             console.error('Autofill error:', e);
         }
+    }
+
+    showUpgradeNudge(message: string) {
+        if (document.getElementById('zk-vault-upgrade-nudge')) return;
+
+        const nudge = document.createElement('div');
+        nudge.id = 'zk-vault-upgrade-nudge';
+        nudge.className = 'zk-vault-save-banner zk-vault-upgrade-nudge'; // Reuse base styles
+        nudge.innerHTML = `
+            <div class="zk-vault-save-content">
+                <div class="zk-vault-nudge-icon">💎</div>
+                <span>${message}</span>
+            </div>
+            <div class="zk-vault-save-actions">
+                <button class="zk-vault-save-btn zk-vault-upgrade-confirm">Go Pro</button>
+                <button class="zk-vault-save-btn zk-vault-save-cancel">Maybe later</button>
+            </div>
+        `;
+        document.body.appendChild(nudge);
+
+        nudge.querySelector('.zk-vault-upgrade-confirm')?.addEventListener('click', () => {
+            chrome.runtime.sendMessage({
+                type: 'TRACK_EVENT',
+                name: 'autofill_limit_nudge_click'
+            });
+            chrome.runtime.sendMessage({ type: 'OPEN_OPTIONS', hash: 'billing' });
+            nudge.remove();
+        });
+
+        nudge.querySelector('.zk-vault-save-cancel')?.addEventListener('click', () => {
+            nudge.remove();
+        });
     }
 
     showDropdown(input: HTMLInputElement, icon: HTMLElement, credentials: any[]) {

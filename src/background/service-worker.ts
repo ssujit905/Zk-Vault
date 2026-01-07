@@ -67,6 +67,12 @@ async function handleMessage(request: any, sender: chrome.runtime.MessageSender,
         return;
     }
 
+    if (request.type === 'TRACK_EVENT') {
+        console.log(`[Analytics] ${request.name}`, request.properties);
+        sendResponse({ status: 'OK' });
+        return;
+    }
+
     if (request.type === 'SCHEDULE_CLIPBOARD_CLEAR') {
         chrome.alarms.clear('clear-clipboard', () => {
             chrome.alarms.create('clear-clipboard', { delayInMinutes: 0.5 });
@@ -192,6 +198,9 @@ async function handleMessage(request: any, sender: chrome.runtime.MessageSender,
 
                 if (!usage.domains.includes(request.domain)) {
                     if (usage.domains.length >= 3) {
+                        // Track conversion friction point
+                        console.log('[Analytics] autofill_limit_reached', { domain: request.domain });
+
                         sendResponse({
                             status: 'LIMIT_REACHED',
                             message: 'Monthly Free Tier limit reached (3 unique domains). Upgrade to Pro for unlimited autofill across all your sites.'
@@ -210,6 +219,14 @@ async function handleMessage(request: any, sender: chrome.runtime.MessageSender,
             console.error(e);
             sendResponse({ status: 'ERROR' });
         }
+    }
+
+    if (request.type === 'OPEN_OPTIONS') {
+        const url = chrome.runtime.getURL('src/options.html');
+        const hash = request.hash ? `#${request.hash}` : '';
+        chrome.tabs.create({ url: `${url}${hash}` });
+        sendResponse({ status: 'OK' });
+        return;
     }
 
     if (request.type === 'CHECK_IF_SAVE_NEEDED') {

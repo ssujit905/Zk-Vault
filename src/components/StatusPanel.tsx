@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Shield, Activity, Clock, Database, ShieldCheck, Zap } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useVault } from '../context/VaultContext';
+import { analyticsService } from '../services/analytics';
 
 export const StatusPanel: React.FC<{ compact?: boolean; onNavigate?: (view: string) => void }> = ({ compact = false, onNavigate }) => {
     const { isAuthenticated, lastUnlockAt, masterKey, tier } = useAuth();
@@ -55,8 +56,8 @@ export const StatusPanel: React.FC<{ compact?: boolean; onNavigate?: (view: stri
                 </div>
                 <div className="flex items-center gap-3">
                     <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border transition-colors ${tier === 'free' ? 'bg-slate-500/10 text-slate-500 border-white/5' :
-                            tier === 'pro' ? 'bg-amber-500/10 text-amber-500 border-amber-500/30' :
-                                'bg-primary-500/10 text-primary-400 border-primary-500/30 shadow-[0_0_15px_rgba(14,165,233,0.15)]'
+                        tier === 'pro' ? 'bg-amber-500/10 text-amber-500 border-amber-500/30' :
+                            'bg-primary-500/10 text-primary-400 border-primary-500/30 shadow-[0_0_15px_rgba(14,165,233,0.15)]'
                         }`}>
                         {tier} Subscription
                     </div>
@@ -129,7 +130,7 @@ export const StatusPanel: React.FC<{ compact?: boolean; onNavigate?: (view: stri
                                         </span>
                                         <span className="text-slate-300 font-bold uppercase tracking-tight">{act.title}</span>
                                         <span className={`text-[9px] font-black uppercase tracking-widest ${act.type === 'ADD' ? 'text-green-500/50' :
-                                                act.type === 'UPDATE' ? 'text-blue-500/50' : 'text-red-500/50'
+                                            act.type === 'UPDATE' ? 'text-blue-500/50' : 'text-red-500/50'
                                             }`}>{act.type}</span>
                                     </div>
                                     <span className="text-slate-600 font-mono text-[10px]">{new Date(act.timestamp).toLocaleTimeString()}</span>
@@ -152,7 +153,10 @@ export const StatusPanel: React.FC<{ compact?: boolean; onNavigate?: (view: stri
                         <h4 className="text-white font-bold mb-2 uppercase tracking-tight">Security Stream Locked</h4>
                         <p className="text-xs text-slate-500 mb-6 max-w-xs mx-auto leading-relaxed">Upgrade to <span className="text-amber-500 font-black">PRO</span> to unlock real-time activity tracking and visual encryption handshakes.</p>
                         <button
-                            onClick={() => onNavigate?.('billing')}
+                            onClick={() => {
+                                analyticsService.trackEvent('attempt_pro_features', { source: 'status_panel' });
+                                onNavigate?.('billing');
+                            }}
                             className="px-6 py-2 bg-amber-500 text-black text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-amber-400 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-amber-900/10"
                         >
                             Explore Pro Features
@@ -169,8 +173,8 @@ export const StatusPanel: React.FC<{ compact?: boolean; onNavigate?: (view: stri
                         {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
                             <div key={i}
                                 className={`w-1 h-3 rounded-full transition-all duration-700 ${isAuthenticated
-                                        ? (tier !== 'free' ? 'bg-primary-500 group-hover:bg-primary-400 animate-pulse' : 'bg-primary-500/20')
-                                        : 'bg-slate-900'
+                                    ? (tier !== 'free' ? 'bg-primary-500 group-hover:bg-primary-400 animate-pulse' : 'bg-primary-500/20')
+                                    : 'bg-slate-900'
                                     }`}
                                 style={{
                                     animationDelay: `${i * 0.15}s`,

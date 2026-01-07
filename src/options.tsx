@@ -30,7 +30,7 @@ const SecurityAudit: React.FC<{ onNavigate?: (view: string) => void }> = ({ onNa
 
     if (tier === 'free') {
         return (
-            <div className="glass-card p-8 relative overflow-hidden group min-h-[400px] flex flex-col justify-center">
+            <div className="glass-card p-12 relative overflow-hidden group min-h-[450px] flex flex-col justify-center border-amber-500/20 bg-amber-500/[0.02]">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl -mr-32 -mt-32 transition-all group-hover:bg-amber-500/20"></div>
                 <div className="absolute bottom-0 left-0 w-48 h-48 bg-primary-500/10 rounded-full blur-3xl -ml-24 -mb-24 transition-all group-hover:bg-primary-500/20"></div>
 
@@ -39,30 +39,37 @@ const SecurityAudit: React.FC<{ onNavigate?: (view: string) => void }> = ({ onNa
                         <Shield className="text-amber-500" size={32} />
                     </div>
 
-                    <h2 className="text-2xl font-bold text-white mb-3 leading-tight">Professional Security Audit</h2>
+                    <h2 className="text-3xl font-black text-white mb-4 leading-tight uppercase tracking-tighter">Professional Security Audit</h2>
                     <p className="text-slate-400 mb-8 max-w-sm leading-relaxed text-sm">
-                        Identify weak passwords, reused credentials, and check for dark web breaches with our advanced auditing engine.
+                        Protect your digital identity with Zk Vault's advanced auditing engine. Identify deep-web breaches, weak entropy, and duplicate credentials.
                     </p>
 
                     <button
                         onClick={() => {
-                            analyticsService.trackEvent('attempt_security_audit');
+                            analyticsService.trackEvent('attempt_pro_audit', { source: 'security_center' });
                             onNavigate?.('billing');
                         }}
-                        className="group/btn relative px-8 py-3 bg-amber-500 text-black font-bold rounded-xl transition-all hover:scale-105 active:scale-95 shadow-[0_4px_20px_rgba(245,158,11,0.4)]"
+                        className="group/btn relative px-10 py-4 bg-amber-500 text-black font-black rounded-xl transition-all hover:scale-105 active:scale-95 shadow-[0_4px_30px_rgba(245,158,11,0.4)]"
                     >
-                        <span className="flex items-center gap-2 text-sm uppercase tracking-widest">
-                            Unlock with Pro
+                        <span className="flex items-center gap-3 text-xs uppercase tracking-[0.2em]">
+                            Unlock Premium Audit
                             <Crown size={18} className="transition-transform group-hover/btn:rotate-12" />
                         </span>
                     </button>
 
-                    <div className="mt-8 flex flex-wrap justify-center items-center gap-4 sm:gap-6 text-[10px] text-slate-500 font-bold tracking-[0.2em] uppercase">
-                        <span>Breach Scan</span>
-                        <div className="w-1.5 h-1.5 rounded-full bg-slate-800 hidden sm:block"></div>
-                        <span>Entropy Check</span>
-                        <div className="w-1.5 h-1.5 rounded-full bg-slate-800 hidden sm:block"></div>
-                        <span>Dark Web Audit</span>
+                    <div className="mt-12 flex flex-wrap justify-center items-center gap-4 sm:gap-8 text-[10px] text-slate-500 font-black tracking-[0.25em] uppercase">
+                        <div className="flex items-center gap-2">
+                            <div className="w-1 h-1 rounded-full bg-amber-500/50"></div>
+                            <span>Dark Web Scan</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-1 h-1 rounded-full bg-amber-500/50"></div>
+                            <span>Entropy Audit</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-1 h-1 rounded-full bg-amber-500/50"></div>
+                            <span>Identity Theft Check</span>
+                        </div>
                     </div>
                 </div>
             </div>
