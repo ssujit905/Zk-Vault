@@ -2,9 +2,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import {
-    Shield, CheckCircle, Lock, Crown, Zap, LayoutDashboard,
+    Shield, CheckCircle, Lock, Crown, Zap,
     Database, Key, Users, Heart, ShieldAlert, ShieldCheck, Upload,
-    LogOut, AlertTriangle
+    LogOut, AlertTriangle, Menu, X
 } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { VaultProvider, useVault } from './context/VaultContext';
@@ -22,7 +22,7 @@ const SecurityAudit: React.FC<{ onNavigate?: (view: string) => void }> = ({ onNa
     const { tier } = useAuth();
     const [audit, setAudit] = useState<AuditResult | null>(null);
 
-    React.useEffect(() => {
+    useEffect(() => {
         if (records.length > 0) {
             setAudit(auditVault(records));
         }
@@ -39,7 +39,7 @@ const SecurityAudit: React.FC<{ onNavigate?: (view: string) => void }> = ({ onNa
                         <Shield className="text-amber-500" size={32} />
                     </div>
 
-                    <h2 className="text-2xl font-bold text-white mb-3">Professional Security Audit</h2>
+                    <h2 className="text-2xl font-bold text-white mb-3 leading-tight">Professional Security Audit</h2>
                     <p className="text-slate-400 mb-8 max-w-sm leading-relaxed text-sm">
                         Identify weak passwords, reused credentials, and check for dark web breaches with our advanced auditing engine.
                     </p>
@@ -57,11 +57,11 @@ const SecurityAudit: React.FC<{ onNavigate?: (view: string) => void }> = ({ onNa
                         </span>
                     </button>
 
-                    <div className="mt-8 flex items-center gap-6 text-[10px] text-slate-500 font-bold tracking-[0.2em] uppercase">
+                    <div className="mt-8 flex flex-wrap justify-center items-center gap-4 sm:gap-6 text-[10px] text-slate-500 font-bold tracking-[0.2em] uppercase">
                         <span>Breach Scan</span>
-                        <div className="w-1.5 h-1.5 rounded-full bg-slate-800"></div>
+                        <div className="w-1.5 h-1.5 rounded-full bg-slate-800 hidden sm:block"></div>
                         <span>Entropy Check</span>
-                        <div className="w-1.5 h-1.5 rounded-full bg-slate-800"></div>
+                        <div className="w-1.5 h-1.5 rounded-full bg-slate-800 hidden sm:block"></div>
                         <span>Dark Web Audit</span>
                     </div>
                 </div>
@@ -88,7 +88,7 @@ const SecurityAudit: React.FC<{ onNavigate?: (view: string) => void }> = ({ onNa
             <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-3">
                     <Shield className="text-primary-400" size={24} />
-                    <h2 className="text-2xl font-bold text-white">Security Audit</h2>
+                    <h2 className="text-2xl font-bold text-white leading-tight">Security Audit</h2>
                 </div>
                 {tier === 'pro' && (
                     <div className="px-3 py-1 bg-amber-500/10 text-amber-500 rounded-full text-[10px] font-black uppercase tracking-widest border border-amber-500/20 flex items-center gap-2">
@@ -97,14 +97,14 @@ const SecurityAudit: React.FC<{ onNavigate?: (view: string) => void }> = ({ onNa
                 )}
             </div>
 
-            <div className="flex items-center justify-between mb-10 p-8 bg-white/[0.02] rounded-3xl border border-white/5 shadow-inner">
+            <div className="flex flex-col sm:flex-row items-center justify-between mb-10 p-6 sm:p-8 bg-white/[0.02] rounded-3xl border border-white/5 shadow-inner gap-6 text-center sm:text-left">
                 <div>
                     <h3 className="text-xl font-bold text-white mb-1">Vault Health Score</h3>
                     <p className="text-sm text-slate-400">Based on encryption entropy and reuse</p>
                 </div>
                 <div className="flex items-center gap-4">
                     <div className="h-16 w-[1px] bg-white/10 hidden sm:block"></div>
-                    <div className={`text-6xl font-black tracking-tighter ${getScoreColor(audit.score)}`}>
+                    <div className={`text-5xl sm:text-6xl font-black tracking-tighter ${getScoreColor(audit.score)}`}>
                         {audit.score}
                     </div>
                 </div>
@@ -119,7 +119,7 @@ const SecurityAudit: React.FC<{ onNavigate?: (view: string) => void }> = ({ onNa
                         </h4>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             {audit.reusedPasswords.map((item, idx) => (
-                                <div key={idx} className="p-4 bg-yellow-500/5 border border-yellow-500/10 rounded-xl text-sm text-slate-300 font-medium">
+                                <div key={idx} className="p-4 bg-yellow-500/5 border border-yellow-500/10 rounded-xl text-sm text-slate-300 font-medium break-all">
                                     {item.title}
                                 </div>
                             ))}
@@ -135,9 +135,9 @@ const SecurityAudit: React.FC<{ onNavigate?: (view: string) => void }> = ({ onNa
                         </h4>
                         <div className="space-y-3">
                             {audit.weakPasswords.map(item => (
-                                <div key={item.id} className="flex justify-between items-center p-4 bg-red-500/5 border border-red-500/10 rounded-xl text-sm group hover:bg-red-500/10 transition-colors">
-                                    <span className="text-slate-200 font-bold">{item.title}</span>
-                                    <span className="px-2 py-1 bg-red-500/10 rounded-md text-red-300 text-[10px] font-black uppercase">{item.reason}</span>
+                                <div key={item.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 bg-red-500/5 border border-red-500/10 rounded-xl text-sm group hover:bg-red-500/10 transition-colors gap-2">
+                                    <span className="text-slate-200 font-bold break-all">{item.title}</span>
+                                    <span className="px-2 py-1 bg-red-500/10 rounded-md text-red-300 text-[10px] font-black uppercase whitespace-nowrap">{item.reason}</span>
                                 </div>
                             ))}
                         </div>
@@ -195,7 +195,7 @@ const SecuritySettings: React.FC = () => {
         <div className="glass-card p-8 animate-fade-in">
             <div className="flex items-center gap-3 mb-8">
                 <Lock className="text-primary-400" size={24} />
-                <h2 className="text-2xl font-bold text-white">Security Settings</h2>
+                <h2 className="text-2xl font-bold text-white">Master Password</h2>
             </div>
 
             <form onSubmit={handlePasswordChange} className="space-y-6">
@@ -329,7 +329,7 @@ const DataManagement: React.FC = () => {
             <div className="glass-card p-8">
                 <div className="flex items-center gap-3 mb-8">
                     <Database className="text-primary-400" size={24} />
-                    <h2 className="text-2xl font-bold text-white">Data Control</h2>
+                    <h2 className="text-2xl font-bold text-white leading-tight">Vault Control</h2>
                 </div>
 
                 {statusMsg.text && (
@@ -343,20 +343,18 @@ const DataManagement: React.FC = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                     <div className="space-y-4">
-                        <h3 className="text-lg font-bold text-white">Export & Backup</h3>
+                        <h3 className="text-lg font-bold text-white">Export Backup</h3>
                         <p className="text-sm text-slate-400 leading-relaxed mb-6">
                             Create a secure, encrypted backup of all your data. This data cannot be read without the backup password.
                         </p>
-                        <div className="flex gap-3">
-                            <button
-                                onClick={handleEncryptedExport}
-                                className="btn-primary flex-1 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest py-4"
-                                disabled={vaultLoading || importing}
-                            >
-                                <ShieldCheck size={18} />
-                                Secure Backup
-                            </button>
-                        </div>
+                        <button
+                            onClick={handleEncryptedExport}
+                            className="btn-primary w-full flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest py-4"
+                            disabled={vaultLoading || importing}
+                        >
+                            <ShieldCheck size={18} />
+                            Secure Backup
+                        </button>
                     </div>
 
                     <div className="space-y-4 border-t md:border-t-0 md:border-l border-white/5 pt-6 md:pt-0 md:pl-10">
@@ -371,7 +369,7 @@ const DataManagement: React.FC = () => {
                             disabled={importing || vaultLoading}
                         >
                             <Upload size={18} />
-                            {importing ? 'Processing...' : 'Restore from Backup'}
+                            {importing ? 'Processing...' : 'Restore backup'}
                         </button>
                     </div>
                 </div>
@@ -380,11 +378,11 @@ const DataManagement: React.FC = () => {
             <div className="glass-card p-8 border-red-900/20 bg-red-950/5">
                 <div className="flex items-center gap-3 mb-6 text-red-500">
                     <AlertTriangle size={24} />
-                    <h2 className="text-2xl font-bold">Destroy All Data</h2>
+                    <h2 className="text-2xl font-bold leading-tight">Destroy Data</h2>
                 </div>
                 <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                    <p className="text-sm text-slate-500 max-w-lg">
-                        This action will wipe your local vault and settings. Data cannot be recovered unless you have a backup file and password.
+                    <p className="text-sm text-slate-500 max-w-lg mb-2 sm:mb-0">
+                        This action will wipe your local vault and settings. Data cannot be recovered unless you have a backup.
                     </p>
                     <button
                         className="btn-danger w-full md:w-auto px-8 py-4 text-xs font-black uppercase tracking-widest whitespace-nowrap"
@@ -394,12 +392,12 @@ const DataManagement: React.FC = () => {
                             }
                         }}
                     >
-                        Factory Reset Vault
+                        Factory Reset
                     </button>
                 </div>
             </div>
 
-            <div className="flex gap-4 pt-4">
+            <div className="flex flex-col sm:flex-row gap-4 pt-4">
                 <button onClick={lock} className="btn-secondary flex-1 py-4 text-xs font-black tracking-widest uppercase">Logout</button>
                 <button
                     onClick={() => {
@@ -416,7 +414,6 @@ const DataManagement: React.FC = () => {
     );
 };
 
-// Family Only Component
 const FamilySharing: React.FC = () => {
     const { tier } = useAuth();
     const [members, setMembers] = useState<FamilyMember[]>([]);
@@ -436,7 +433,6 @@ const FamilySharing: React.FC = () => {
     const handleInvite = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
-        // Simulate API call/Email
         await new Promise(r => setTimeout(r, 1000));
 
         const member: FamilyMember = {
@@ -484,7 +480,7 @@ const FamilySharing: React.FC = () => {
                     Securely share logins and cards with up to 5 family members using end-to-end ZK encryption.
                 </p>
                 <button
-                    onClick={() => window.location.hash = '#subscription'}
+                    onClick={() => window.location.hash = '#billing'}
                     className="btn-primary px-12 py-4 text-xs font-black uppercase tracking-widest"
                 >
                     Upgrade to Family
@@ -496,7 +492,7 @@ const FamilySharing: React.FC = () => {
     return (
         <div className="space-y-6 animate-fade-in">
             <div className="glass-card p-8 bg-blue-950/5 border-blue-500/20">
-                <div className="flex items-center justify-between mb-8">
+                <div className="flex flex-col sm:flex-row items-center justify-between mb-8 gap-6">
                     <div className="flex items-center gap-3">
                         <Users className="text-blue-400" size={24} />
                         <h2 className="text-2xl font-bold text-white">Family Center</h2>
@@ -504,9 +500,9 @@ const FamilySharing: React.FC = () => {
                     <button
                         onClick={() => setShowAddModal(true)}
                         disabled={members.length >= 5}
-                        className="btn-primary flex items-center gap-2 px-6 py-3 text-[10px] font-black uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="btn-primary w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 text-[10px] font-black uppercase tracking-widest disabled:opacity-50"
                     >
-                        Invite Member ({members.length}/5)
+                        Invite member ({members.length}/5)
                     </button>
                 </div>
 
@@ -519,29 +515,28 @@ const FamilySharing: React.FC = () => {
                 ) : (
                     <div className="grid gap-4">
                         {members.map(member => (
-                            <div key={member.id} className="p-6 bg-white/[0.02] border border-white/5 rounded-2xl flex items-center justify-between group hover:border-white/10 transition-colors">
-                                <div className="flex items-center gap-4">
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold ${member.status === 'active' ? 'bg-green-500/10 text-green-500' : 'bg-slate-800 text-slate-500'
-                                        }`}>
+                            <div key={member.id} className="p-6 bg-white/[0.02] border border-white/5 rounded-2xl flex flex-col sm:flex-row items-center justify-between group hover:border-white/10 transition-colors gap-6">
+                                <div className="flex items-center gap-4 w-full sm:w-auto">
+                                    <div className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-lg font-bold ${member.status === 'active' ? 'bg-green-500/10 text-green-500' : 'bg-slate-800 text-slate-500'}`}>
                                         {member.name.charAt(0)}
                                     </div>
-                                    <div>
+                                    <div className="min-w-0">
                                         <div className="flex items-center gap-2">
-                                            <h4 className="font-bold text-white">{member.name}</h4>
+                                            <h4 className="font-bold text-white truncate">{member.name}</h4>
                                             {member.role === 'admin' && <span className="px-1.5 py-0.5 bg-primary-500/20 text-primary-400 text-[9px] rounded font-black uppercase">Admin</span>}
                                         </div>
-                                        <div className="text-xs text-slate-500 flex items-center gap-2">
-                                            {member.email} •
+                                        <div className="text-xs text-slate-500 flex flex-wrap items-center gap-2">
+                                            <span className="truncate max-w-[150px] sm:max-w-none">{member.email}</span> •
                                             <span className={member.status === 'active' ? 'text-green-500' : 'text-amber-500'}>
-                                                {member.status === 'active' ? 'Protected' : 'Invite Sent'}
+                                                {member.status === 'active' ? 'Protected' : 'Pending'}
                                             </span>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="flex items-center gap-6">
+                                <div className="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto">
                                     <div className="flex flex-col items-end">
-                                        <label className="text-[9px] font-black uppercase text-slate-600 mb-1 cursor-help" title="Allows access to vault in emergency">Emergency Access</label>
+                                        <label className="text-[9px] font-black uppercase text-slate-600 mb-1 cursor-help">Emergency</label>
                                         <button
                                             onClick={() => toggleEmergency(member.id)}
                                             className={`w-10 h-5 rounded-full relative transition-colors ${member.emergencyAccess ? 'bg-red-500' : 'bg-slate-700'}`}
@@ -563,9 +558,12 @@ const FamilySharing: React.FC = () => {
             </div>
 
             {showAddModal && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in">
                     <div className="glass-card max-w-md w-full p-8 border-primary-500/30">
-                        <h3 className="text-xl font-bold text-white mb-6">Invite Family Member</h3>
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-xl font-bold text-white">Invite Family Member</h3>
+                            <button onClick={() => setShowAddModal(false)} className="text-slate-500 hover:text-white"><X size={20} /></button>
+                        </div>
                         <form onSubmit={handleInvite} className="space-y-4">
                             <div>
                                 <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">Full Name</label>
@@ -602,7 +600,7 @@ const FamilySharing: React.FC = () => {
                                     disabled={loading}
                                     className="flex-[2] btn-primary py-3 text-xs font-black uppercase tracking-widest"
                                 >
-                                    {loading ? 'Sending Invite...' : 'Send Invitation'}
+                                    {loading ? 'Processing...' : 'Send Invitation'}
                                 </button>
                             </div>
                         </form>
@@ -613,16 +611,36 @@ const FamilySharing: React.FC = () => {
     );
 };
 
+const SecurityCenter: React.FC<{ onNavigate?: (view: string) => void }> = ({ onNavigate }) => {
+    return (
+        <div className="space-y-8 animate-fade-in">
+            <StatusPanel onNavigate={onNavigate} />
+            <SecurityAudit onNavigate={onNavigate} />
+        </div>
+    );
+};
+
+const VaultSettings: React.FC = () => {
+    return (
+        <div className="space-y-8 animate-fade-in">
+            <SecuritySettings />
+            <DataManagement />
+        </div>
+    );
+};
+
 const OptionsContent: React.FC = () => {
     const { isAuthenticated, loading, tier, lock } = useAuth();
-    const [activeView, setActiveView] = useState('dashboard');
+    const [activeView, setActiveView] = useState('security');
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-    // Sync state with URL hash
     useEffect(() => {
         const handleHash = () => {
             const hash = window.location.hash.replace('#', '');
-            if (['dashboard', 'audit', 'security', 'data', 'billing', 'family'].includes(hash)) {
+            if (['security', 'settings', 'billing', 'family'].includes(hash)) {
                 setActiveView(hash);
+            } else {
+                setActiveView('security');
             }
         };
         handleHash();
@@ -632,6 +650,7 @@ const OptionsContent: React.FC = () => {
 
     const updateView = (view: string) => {
         window.location.hash = view;
+        setIsMenuOpen(false);
     };
 
     if (loading) return (
@@ -644,47 +663,43 @@ const OptionsContent: React.FC = () => {
 
     const renderView = () => {
         switch (activeView) {
-            case 'audit': return <SecurityAudit onNavigate={updateView} />;
-            case 'security': return <SecuritySettings />;
-            case 'data': return <DataManagement />;
+            case 'settings': return <VaultSettings />;
             case 'billing': return <BillingPanel />;
             case 'family': return <FamilySharing />;
-            default: return <StatusPanel onNavigate={updateView} />;
+            case 'security':
+            default: return <SecurityCenter onNavigate={updateView} />;
         }
     };
 
     const getViewTitle = () => {
         switch (activeView) {
-            case 'audit': return 'Security Brain';
-            case 'security': return 'Lockbox Settings';
-            case 'data': return 'Vault Control';
+            case 'settings': return 'Vault Control';
             case 'billing': return 'Subscription';
             case 'family': return 'Sharing Center';
-            default: return 'Main Dashboard';
+            case 'security':
+            default: return 'Security Center';
         }
     };
 
     return (
-        <div className="min-h-screen bg-[#02040a] text-slate-200">
+        <div className="min-h-screen bg-[#02040a] text-slate-200 selection:bg-primary-500/30">
             {/* CLEAN NAV BAR */}
             <header className="sticky top-0 z-50 w-full bg-[#02040a]/80 backdrop-blur-2xl border-b border-white/[0.03]">
-                <div className="max-w-6xl mx-auto px-8 h-20 flex items-center justify-between">
-                    <div className="flex items-center gap-4 cursor-pointer group" onClick={() => updateView('dashboard')}>
+                <div className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
+                    <div className="flex items-center gap-4 cursor-pointer group" onClick={() => updateView('security')}>
                         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-600 to-indigo-700 p-[1px] shadow-lg shadow-primary-900/20 group-hover:scale-110 transition-transform">
                             <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
                                 <Shield className="text-primary-400" size={18} />
                             </div>
                         </div>
-                        <span className="text-xl font-black text-white tracking-tight uppercase">Zk Vault</span>
+                        <span className="text-xl font-black text-white tracking-tight uppercase hidden sm:block">Zk Vault</span>
                     </div>
 
                     <nav className="hidden lg:flex items-center gap-2">
                         {[
-                            { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-                            { id: 'audit', label: 'Security', icon: Shield },
-                            { id: 'security', label: 'Settings', icon: Key },
-                            { id: 'data', label: 'Data', icon: Database },
+                            { id: 'security', label: 'Security', icon: Shield },
                             { id: 'family', label: 'Family', icon: Users },
+                            { id: 'settings', label: 'Settings', icon: Key },
                         ].map(item => (
                             <button
                                 key={item.id}
@@ -697,47 +712,82 @@ const OptionsContent: React.FC = () => {
                         ))}
                     </nav>
 
-                    <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-2 sm:gap-4">
                         <button
                             onClick={() => updateView('billing')}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all ${tier === 'free' ? 'border-amber-500/20 text-amber-500 hover:bg-amber-500/10' :
+                            className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full border transition-all ${tier === 'free' ? 'border-amber-500/20 text-amber-500 hover:bg-amber-500/10' :
                                 tier === 'pro' ? 'border-amber-500 text-amber-500 bg-amber-500/5 cursor-default' :
                                     'border-primary-500 text-primary-400 bg-primary-500/5 cursor-default'
                                 }`}
                         >
                             {tier !== 'free' ? <Crown size={14} /> : <Zap size={14} className="animate-pulse" />}
-                            <span className="text-[10px] font-black uppercase tracking-widest">{tier} Tier</span>
+                            <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest">{tier} Tier</span>
                         </button>
 
-                        <button onClick={lock} className="p-2 text-slate-500 hover:text-red-400 transition-colors" title="Lock Vault">
+                        <button onClick={lock} className="p-2 text-slate-500 hover:text-red-400 transition-colors hidden sm:block" title="Lock Vault">
                             <LogOut size={20} />
+                        </button>
+
+                        <button
+                            onClick={() => setIsMenuOpen(!isMenuOpen)}
+                            className="p-2 text-slate-400 lg:hidden"
+                        >
+                            {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
                         </button>
                     </div>
                 </div>
+
+                {/* MOBILE NAV MENU */}
+                {isMenuOpen && (
+                    <div className="lg:hidden absolute top-20 left-0 w-full bg-[#02040a] border-b border-white/5 p-4 space-y-2 animate-in slide-in-from-top duration-300">
+                        {[
+                            { id: 'security', label: 'Security Center', icon: Shield },
+                            { id: 'family', label: 'Family Center', icon: Users },
+                            { id: 'settings', label: 'Vault Control', icon: Key },
+                        ].map(item => (
+                            <button
+                                key={item.id}
+                                onClick={() => updateView(item.id)}
+                                className={`w-full flex items-center gap-3 px-6 py-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeView === item.id ? 'bg-primary-500 text-white' : 'text-slate-500 hover:text-white hover:bg-white/5'
+                                    }`}
+                            >
+                                <item.icon size={18} />
+                                {item.label}
+                            </button>
+                        ))}
+                        <button
+                            onClick={lock}
+                            className="w-full flex items-center gap-3 px-6 py-4 rounded-xl text-xs font-black uppercase tracking-widest text-red-500 hover:bg-red-500/10"
+                        >
+                            <LogOut size={18} />
+                            Lock Vault
+                        </button>
+                    </div>
+                )}
             </header>
 
             {/* MAIN CONTENT AREA */}
-            <main className="max-w-5xl mx-auto px-8 py-16">
-                <div className="mb-12 flex items-baseline justify-between border-b border-white/5 pb-8">
+            <main className="max-w-5xl mx-auto px-6 sm:px-8 py-12 sm:py-16">
+                <div className="mb-12 flex flex-col sm:flex-row items-baseline justify-between border-b border-white/5 pb-8 gap-4">
                     <div>
-                        <h1 className="text-5xl font-black text-white tracking-tighter mb-2">{getViewTitle()}</h1>
-                        <p className="text-slate-500 font-medium font-mono text-xs uppercase tracking-[0.3em]">Status: <span className="text-green-500">Authorized Session</span></p>
+                        <h1 className="text-4xl sm:text-5xl font-black text-white tracking-tighter mb-2 break-words">{getViewTitle()}</h1>
+                        <p className="text-slate-500 font-medium font-mono text-[10px] uppercase tracking-[0.3em]">Status: <span className="text-green-500">Authorized Session</span></p>
                     </div>
-                    <div className="hidden sm:block">
+                    <div className="w-full sm:w-auto">
                         <StatusPanel compact />
                     </div>
                 </div>
 
-                <div className="animate-fade-in">
+                <div className="animate-fade-in pb-20">
                     {renderView()}
                 </div>
             </main>
 
-            <footer className="max-w-5xl mx-auto px-8 py-12 border-t border-white/5 flex items-center justify-between text-slate-600 font-bold text-[9px] uppercase tracking-[0.4em]">
+            <footer className="max-w-5xl mx-auto px-6 sm:px-8 py-12 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-6 text-slate-600 font-bold text-[9px] uppercase tracking-[0.4em]">
                 <div>Zk Vault • Zero-Knowledge Core v1.0</div>
                 <div className="flex gap-6">
                     <span className="hover:text-white transition-colors cursor-pointer">Security Protocol</span>
-                    <span className="hover:text-white transition-colors cursor-pointer">Export Keys</span>
+                    <span className="hover:text-white transition-colors cursor-pointer">Privacy Policy</span>
                 </div>
             </footer>
         </div>
