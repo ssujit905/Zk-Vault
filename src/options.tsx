@@ -2,9 +2,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import {
-    Shield, CheckCircle, Lock, Crown, Zap,
-    Database, Key, Users, Heart, ShieldAlert, ShieldCheck, Upload,
-    LogOut, AlertTriangle, Menu, X
+    Shield, CheckCircle, Lock, Crown, Zap, Database, Key, Users, Heart,
+    ShieldAlert, ShieldCheck, Upload, LogOut, AlertTriangle, X,
+    Settings, CreditCard, HardDrive
 } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { VaultProvider, useVault } from './context/VaultContext';
@@ -421,7 +421,7 @@ const DataManagement: React.FC = () => {
     );
 };
 
-const FamilySharing: React.FC = () => {
+const FamilySharing: React.FC<{ onNavigate?: (view: string) => void }> = ({ onNavigate }) => {
     const { tier } = useAuth();
     const [members, setMembers] = useState<FamilyMember[]>([]);
     const [showAddModal, setShowAddModal] = useState(false);
@@ -487,7 +487,7 @@ const FamilySharing: React.FC = () => {
                     Securely share logins and cards with up to 5 family members using end-to-end ZK encryption.
                 </p>
                 <button
-                    onClick={() => window.location.hash = '#billing'}
+                    onClick={() => onNavigate?.('billing')}
                     className="btn-primary px-12 py-4 text-xs font-black uppercase tracking-widest"
                 >
                     Upgrade to Family
@@ -618,36 +618,19 @@ const FamilySharing: React.FC = () => {
     );
 };
 
-const SecurityCenter: React.FC<{ onNavigate?: (view: string) => void }> = ({ onNavigate }) => {
-    return (
-        <div className="space-y-8 animate-fade-in">
-            <StatusPanel onNavigate={onNavigate} />
-            <SecurityAudit onNavigate={onNavigate} />
-        </div>
-    );
-};
-
-const VaultSettings: React.FC = () => {
-    return (
-        <div className="space-y-8 animate-fade-in">
-            <SecuritySettings />
-            <DataManagement />
-        </div>
-    );
-};
-
 const OptionsContent: React.FC = () => {
     const { isAuthenticated, loading, tier, lock } = useAuth();
-    const [activeView, setActiveView] = useState('security');
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [activeView, setActiveView] = useState('dashboard');
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const handleHash = () => {
             const hash = window.location.hash.replace('#', '');
-            if (['security', 'settings', 'billing', 'family'].includes(hash)) {
+            if (['dashboard', 'audit', 'family', 'password', 'data', 'billing'].includes(hash)) {
                 setActiveView(hash);
             } else {
-                setActiveView('security');
+                setActiveView('dashboard');
             }
         };
         handleHash();
@@ -655,9 +638,19 @@ const OptionsContent: React.FC = () => {
         return () => window.removeEventListener('hashchange', handleHash);
     }, []);
 
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
     const updateView = (view: string) => {
         window.location.hash = view;
-        setIsMenuOpen(false);
+        setIsDropdownOpen(false);
     };
 
     if (loading) return (
@@ -670,30 +663,33 @@ const OptionsContent: React.FC = () => {
 
     const renderView = () => {
         switch (activeView) {
-            case 'settings': return <VaultSettings />;
+            case 'audit': return <SecurityAudit onNavigate={updateView} />;
+            case 'family': return <FamilySharing onNavigate={updateView} />;
+            case 'password': return <SecuritySettings />;
+            case 'data': return <DataManagement />;
             case 'billing': return <BillingPanel />;
-            case 'family': return <FamilySharing />;
-            case 'security':
-            default: return <SecurityCenter onNavigate={updateView} />;
+            case 'dashboard':
+            default: return <StatusPanel onNavigate={updateView} />;
         }
     };
 
     const getViewTitle = () => {
         switch (activeView) {
-            case 'settings': return 'Vault Control';
+            case 'audit': return 'Security Audit';
+            case 'family': return 'Family Center';
+            case 'password': return 'Manage Keys';
+            case 'data': return 'Vault Control';
             case 'billing': return 'Subscription';
-            case 'family': return 'Sharing Center';
-            case 'security':
-            default: return 'Security Center';
+            case 'dashboard':
+            default: return 'Live Status';
         }
     };
 
     return (
         <div className="min-h-screen bg-[#02040a] text-slate-200 selection:bg-primary-500/30">
-            {/* CLEAN NAV BAR */}
             <header className="sticky top-0 z-50 w-full bg-[#02040a]/80 backdrop-blur-2xl border-b border-white/[0.03]">
                 <div className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
-                    <div className="flex items-center gap-4 cursor-pointer group" onClick={() => updateView('security')}>
+                    <div className="flex items-center gap-4 cursor-pointer group" onClick={() => updateView('dashboard')}>
                         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-600 to-indigo-700 p-[1px] shadow-lg shadow-primary-900/20 group-hover:scale-110 transition-transform">
                             <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
                                 <Shield className="text-primary-400" size={18} />
@@ -702,24 +698,7 @@ const OptionsContent: React.FC = () => {
                         <span className="text-xl font-black text-white tracking-tight uppercase hidden sm:block">Zk Vault</span>
                     </div>
 
-                    <nav className="hidden lg:flex items-center gap-2">
-                        {[
-                            { id: 'security', label: 'Security', icon: Shield },
-                            { id: 'family', label: 'Family', icon: Users },
-                            { id: 'settings', label: 'Settings', icon: Key },
-                        ].map(item => (
-                            <button
-                                key={item.id}
-                                onClick={() => updateView(item.id)}
-                                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeView === item.id ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/20' : 'text-slate-500 hover:text-white hover:bg-white/5'
-                                    }`}
-                            >
-                                {item.label}
-                            </button>
-                        ))}
-                    </nav>
-
-                    <div className="flex items-center gap-2 sm:gap-4">
+                    <div className="flex items-center gap-2 sm:gap-4 relative" ref={dropdownRef}>
                         <button
                             onClick={() => updateView('billing')}
                             className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full border transition-all ${tier === 'free' ? 'border-amber-500/20 text-amber-500 hover:bg-amber-500/10' :
@@ -731,46 +710,65 @@ const OptionsContent: React.FC = () => {
                             <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest">{tier} Tier</span>
                         </button>
 
-                        <button onClick={lock} className="p-2 text-slate-500 hover:text-red-400 transition-colors hidden sm:block" title="Lock Vault">
-                            <LogOut size={20} />
+                        <button
+                            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                            className={`p-2 rounded-xl transition-all ${isDropdownOpen ? 'bg-primary-500/10 text-primary-400 ring-1 ring-primary-400/50' : 'text-slate-500 hover:text-white'}`}
+                        >
+                            <Settings size={22} className={isDropdownOpen ? 'animate-spin-slow' : ''} />
                         </button>
 
-                        <button
-                            onClick={() => setIsMenuOpen(!isMenuOpen)}
-                            className="p-2 text-slate-400 lg:hidden"
-                        >
-                            {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-                        </button>
+                        {/* DESKTOP/MOBILE SETTINGS DROPDOWN */}
+                        {isDropdownOpen && (
+                            <div className="absolute top-full right-0 mt-3 w-64 bg-slate-950 border border-white/5 rounded-2xl shadow-2xl p-2 animate-in fade-in zoom-in-95 duration-200 backdrop-blur-3xl overflow-hidden ring-1 ring-white/10">
+                                <div className="px-4 py-3 mb-2 border-b border-white/5">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Vault Control</p>
+                                    <p className="text-xs text-white font-bold opacity-80">Manage your security</p>
+                                </div>
+
+                                <div className="space-y-1">
+                                    {[
+                                        { id: 'dashboard', label: 'Main Dashboard', icon: Shield },
+                                        { id: 'audit', label: 'Security Audit', icon: ShieldCheck },
+                                        { id: 'family', label: 'Family Center', icon: Users },
+                                        { id: 'password', label: 'Master Password', icon: Key },
+                                        { id: 'data', label: 'Import & Export', icon: HardDrive },
+                                        { id: 'billing', label: 'Subscription', icon: CreditCard },
+                                    ].map(item => (
+                                        <button
+                                            key={item.id}
+                                            onClick={() => updateView(item.id)}
+                                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all ${activeView === item.id ? 'bg-primary-500/10 text-primary-400' : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                                                }`}
+                                        >
+                                            <item.icon size={16} />
+                                            {item.label}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                <div className="mt-2 pt-2 border-t border-white/5 space-y-1">
+                                    <button
+                                        onClick={() => {
+                                            lock();
+                                            chrome.runtime.sendMessage({ type: 'SCHEDULE_CLIPBOARD_CLEAR' });
+                                        }}
+                                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[11px] font-bold uppercase tracking-widest text-red-500 hover:bg-red-500/10 transition-all"
+                                    >
+                                        <Zap size={16} />
+                                        Panic Lock
+                                    </button>
+                                    <button
+                                        onClick={lock}
+                                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[11px] font-bold uppercase tracking-widest text-slate-500 hover:text-white hover:bg-white/5 transition-all"
+                                    >
+                                        <LogOut size={16} />
+                                        Log Out
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
-
-                {/* MOBILE NAV MENU */}
-                {isMenuOpen && (
-                    <div className="lg:hidden absolute top-20 left-0 w-full bg-[#02040a] border-b border-white/5 p-4 space-y-2 animate-in slide-in-from-top duration-300">
-                        {[
-                            { id: 'security', label: 'Security Center', icon: Shield },
-                            { id: 'family', label: 'Family Center', icon: Users },
-                            { id: 'settings', label: 'Vault Control', icon: Key },
-                        ].map(item => (
-                            <button
-                                key={item.id}
-                                onClick={() => updateView(item.id)}
-                                className={`w-full flex items-center gap-3 px-6 py-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeView === item.id ? 'bg-primary-500 text-white' : 'text-slate-500 hover:text-white hover:bg-white/5'
-                                    }`}
-                            >
-                                <item.icon size={18} />
-                                {item.label}
-                            </button>
-                        ))}
-                        <button
-                            onClick={lock}
-                            className="w-full flex items-center gap-3 px-6 py-4 rounded-xl text-xs font-black uppercase tracking-widest text-red-500 hover:bg-red-500/10"
-                        >
-                            <LogOut size={18} />
-                            Lock Vault
-                        </button>
-                    </div>
-                )}
             </header>
 
             {/* MAIN CONTENT AREA */}
