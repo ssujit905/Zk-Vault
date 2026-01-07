@@ -88,67 +88,74 @@ export const BillingPanel: React.FC = () => {
                 <p className="text-slate-400">Secure your digital life with zero-knowledge encryption. Upgrade anytime to unlock advanced protection and seamless sharing.</p>
             </div>
 
-            <div className="flex flex-col gap-4 max-w-3xl mx-auto">
+            <div className="flex flex-col gap-6 max-w-xl mx-auto">
                 {plans.map((plan) => (
                     <div
                         key={plan.id}
-                        className={`relative glass-card p-6 flex flex-col md:flex-row items-center gap-8 transition-all duration-300 ${tier === plan.id ? `ring-2 ring-${plan.color === 'primary' ? 'primary-500' : plan.color === 'amber' ? 'amber-500' : 'slate-500'}` :
+                        className={`relative glass-card p-8 flex flex-col items-center text-center transition-all duration-300 ${tier === plan.id ? `ring-2 ring-${plan.color === 'primary' ? 'primary-500' : plan.color === 'amber' ? 'amber-500' : 'slate-500'}` :
                             'hover:border-white/20'
                             }`}
                     >
                         {plan.popular && (
-                            <div className="absolute top-0 right-8 -translate-y-1/2 bg-amber-500 text-black text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-lg z-20">
+                            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-amber-500 text-black text-[9px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest shadow-lg z-20">
                                 Recommended
                             </div>
                         )}
 
                         {/* Plan Header & Identity */}
-                        <div className="flex flex-col items-center md:items-start text-center md:text-left min-w-[180px]">
-                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-4 ${plan.color === 'amber' ? 'bg-amber-500/10 text-amber-500' :
-                                plan.color === 'primary' ? 'bg-primary-500/10 text-primary-400' :
+                        <div className="mb-8">
+                            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-6 ${plan.color === 'amber' ? 'bg-amber-500/10 text-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.1)]' :
+                                plan.color === 'primary' ? 'bg-primary-500/10 text-primary-400 shadow-[0_0_20px_rgba(14,165,233,0.1)]' :
                                     'bg-slate-500/10 text-slate-400'
                                 }`}>
-                                <plan.icon size={28} />
+                                <plan.icon size={32} />
                             </div>
-                            <h3 className="text-xl font-bold text-white mb-1">{plan.name}</h3>
-                            <div className="flex items-baseline gap-1">
-                                <span className="text-3xl font-black text-white">{plan.price}</span>
-                                {plan.period && <span className="text-slate-500 font-medium text-xs">{plan.period}</span>}
+                            <h3 className="text-2xl font-black text-white mb-2 uppercase tracking-tight">{plan.name}</h3>
+                            <div className="flex items-baseline justify-center gap-1">
+                                <span className="text-5xl font-black text-white tracking-tighter">{plan.price}</span>
+                                {plan.period && <span className="text-slate-500 font-bold text-sm">{plan.period}</span>}
                             </div>
+                            <p className="mt-4 text-slate-400 text-xs font-medium max-w-xs leading-relaxed">
+                                {plan.description}
+                            </p>
                         </div>
 
-                        {/* Plan Features Checklist */}
-                        <div className="flex-grow grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+                        {/* Plan Features Checklist - STRICTLY VERTICAL */}
+                        <div className="w-full max-w-xs mb-10 space-y-3.5 border-y border-white/5 py-8">
                             {plan.features.map((feature, i) => (
-                                <div key={i} className="flex gap-2 text-[11px] items-center">
-                                    <Check size={12} className={plan.color === 'amber' ? 'text-amber-500' : plan.color === 'primary' ? 'text-primary-400' : 'text-slate-500'} />
-                                    <span className="text-slate-400 font-medium">{feature}</span>
+                                <div key={i} className="flex gap-3 text-xs items-center justify-start px-4">
+                                    <div className="flex-shrink-0">
+                                        <Check size={14} className={plan.color === 'amber' ? 'text-amber-500' : plan.color === 'primary' ? 'text-primary-400' : 'text-slate-500'} />
+                                    </div>
+                                    <span className="text-slate-300 font-medium tracking-wide">{feature}</span>
                                 </div>
                             ))}
                         </div>
 
                         {/* Action / CTA */}
-                        <div className="w-full md:w-48 flex flex-col gap-2">
+                        <div className="w-full max-w-xs flex flex-col gap-3">
                             <button
                                 onClick={() => handleUpgrade(plan.id)}
                                 disabled={tier === plan.id || processing !== null}
-                                className={`w-full py-3 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 ${tier === plan.id
+                                className={`w-full py-4 rounded-xl font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 ${tier === plan.id
                                     ? 'bg-white/5 text-slate-500 cursor-default border border-white/5'
                                     : plan.color === 'amber'
-                                        ? 'bg-amber-500 text-black hover:bg-amber-400 shadow-[0_4px_20px_rgba(245,158,11,0.2)] active:scale-95'
+                                        ? 'bg-amber-500 text-black hover:bg-amber-400 shadow-[0_8px_25px_rgba(245,158,11,0.25)] active:scale-95'
                                         : plan.color === 'primary'
-                                            ? 'bg-primary-500 text-white hover:bg-primary-400 shadow-[0_4px_20px_rgba(14,165,233,0.2)] active:scale-95'
-                                            : 'bg-white/10 text-white hover:bg-white/20 active:scale-95 text-[10px]'
+                                            ? 'bg-primary-500 text-white hover:bg-primary-400 shadow-[0_8px_25_rgba(14,165,233,0.25)] active:scale-95'
+                                            : 'bg-white/10 text-white hover:bg-white/20 active:scale-95'
                                     }`}
                             >
                                 {processing === plan.id ? (
-                                    <Loader2 size={14} className="animate-spin" />
+                                    <Loader2 size={16} className="animate-spin" />
                                 ) : (
-                                    tier === plan.id ? 'Active' : plan.cta
+                                    tier === plan.id ? 'Current Plan' : plan.cta
                                 )}
                             </button>
                             {plan.id !== 'free' && tier === 'free' && (
-                                <span className="text-[9px] text-center text-slate-500 font-bold uppercase tracking-widest">Instant Activation</span>
+                                <span className="text-[10px] text-center text-slate-500 font-black uppercase tracking-[0.15em] opacity-60">
+                                    Instant Global Activation
+                                </span>
                             )}
                         </div>
                     </div>
