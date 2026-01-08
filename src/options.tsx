@@ -4,7 +4,7 @@ import './index.css';
 import {
     Shield, CheckCircle, Lock, Crown, Zap, Database, Users,
     ShieldAlert, ShieldCheck, Upload, LogOut, AlertTriangle,
-    Settings, CreditCard, HardDrive
+    Settings, CreditCard, HardDrive, Loader2
 } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { VaultProvider, useVault } from './context/VaultContext';
@@ -14,17 +14,47 @@ import { StatusPanel } from './components/StatusPanel';
 import { createEncryptedBackup, restoreFromEncryptedBackup } from './utils/backup';
 import { BillingPanel } from './components/BillingPanel';
 import { analyticsService } from './services/analytics';
+import { checkPasswordBreach, type BreachInfo } from './utils/breachCheck';
 
 const SecurityAudit: React.FC<{ onNavigate?: (view: string) => void }> = ({ onNavigate }) => {
     const { records } = useVault();
     const { tier } = useAuth();
     const [audit, setAudit] = useState<AuditResult | null>(null);
+    const [breachResults, setBreachResults] = useState<Record<string, BreachInfo>>({});
+    const [checkingBreaches, setCheckingBreaches] = useState(false);
 
     useEffect(() => {
         if (records.length > 0) {
             setAudit(auditVault(records));
         }
     }, [records]);
+
+    useEffect(() => {
+        const checkBreaches = async () => {
+            if (tier !== 'pro' || records.length === 0 || checkingBreaches) return;
+
+            setCheckingBreaches(true);
+            const results: Record<string, BreachInfo> = {};
+
+            // Limit concurrent requests to be polite to API
+            const loginRecords = records.filter(r => r.type === 'login');
+
+            for (const record of loginRecords) {
+                const password = (record as any).password;
+                if (password) {
+                    const info = await checkPasswordBreach(password);
+                    if (info.isPwned) {
+                        results[record.id] = info;
+                    }
+                }
+            }
+
+            setBreachResults(results);
+            setCheckingBreaches(false);
+        };
+
+        checkBreaches();
+    }, [records, tier]);
 
     if (tier === 'free') {
         return (
@@ -116,6 +146,37 @@ const SecurityAudit: React.FC<{ onNavigate?: (view: string) => void }> = ({ onNa
             </div>
 
             <div className="space-y-8">
+                {checkingBreaches && (
+                    <div className="p-4 bg-primary-500/5 border border-primary-500/10 rounded-xl flex items-center justify-center gap-3">
+                        <Loader2 size={16} className="animate-spin text-primary-400" />
+                        <span className="text-[10px] font-black text-primary-400 uppercase tracking-widest">Scanning Global Breaches...</span>
+                    </div>
+                )}
+
+                {Object.keys(breachResults).length > 0 && (
+                    <div className="space-y-4">
+                        <h4 className="flex items-center gap-2 text-red-500 font-bold text-sm uppercase tracking-widest">
+                            <ShieldAlert size={18} />
+                            Compromised Credentials ({Object.keys(breachResults).length})
+                        </h4>
+                        <div className="space-y-3">
+                            {records.filter(r => breachResults[r.id]).map(record => (
+                                <div key={record.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 bg-red-600/10 border border-red-500/20 rounded-xl text-sm group hover:bg-red-600/20 transition-all gap-4">
+                                    <div className="flex flex-col">
+                                        <span className="text-white font-bold break-all">{record.title}</span>
+                                        <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wider mt-1">Leak Detected in Global Database</span>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="px-3 py-1 bg-red-500/20 rounded-full text-red-400 text-[10px] font-black uppercase whitespace-nowrap border border-red-500/30">
+                                            Found {breachResults[record.id].count.toLocaleString()} times
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 {audit.reusedPasswords.length > 0 && (
                     <div className="space-y-4">
                         <h4 className="flex items-center gap-2 text-yellow-500 font-bold text-sm uppercase tracking-widest">
@@ -134,28 +195,28 @@ const SecurityAudit: React.FC<{ onNavigate?: (view: string) => void }> = ({ onNa
 
                 {audit.weakPasswords.length > 0 && (
                     <div className="space-y-4">
-                        <h4 className="flex items-center gap-2 text-red-500 font-bold text-sm uppercase tracking-widest">
-                            <ShieldAlert size={18} />
+                        <h4 className="flex items-center gap-2 text-amber-500 font-bold text-sm uppercase tracking-widest">
+                            <Zap size={18} />
                             Weak Passwords ({audit.weakPasswords.length})
                         </h4>
                         <div className="space-y-3">
                             {audit.weakPasswords.map(item => (
-                                <div key={item.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 bg-red-500/5 border border-red-500/10 rounded-xl text-sm group hover:bg-red-500/10 transition-colors gap-2">
+                                <div key={item.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 bg-amber-500/5 border border-amber-500/10 rounded-xl text-sm group hover:bg-amber-500/10 transition-colors gap-2">
                                     <span className="text-slate-200 font-bold break-all">{item.title}</span>
-                                    <span className="px-2 py-1 bg-red-500/10 rounded-md text-red-300 text-[10px] font-black uppercase whitespace-nowrap">{item.reason}</span>
+                                    <span className="px-2 py-1 bg-amber-500/10 rounded-md text-amber-300 text-[10px] font-black uppercase whitespace-nowrap">{item.reason}</span>
                                 </div>
                             ))}
                         </div>
                     </div>
                 )}
 
-                {audit.weakPasswords.length === 0 && audit.reusedPasswords.length === 0 && (
+                {audit.weakPasswords.length === 0 && audit.reusedPasswords.length === 0 && Object.keys(breachResults).length === 0 && (
                     <div className="flex flex-col items-center justify-center py-12 text-slate-400">
                         <div className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center mb-6 ring-1 ring-green-500/20">
                             <CheckCircle size={40} className="text-green-500" />
                         </div>
                         <p className="font-bold text-lg text-white mb-2">Maximum Security Reached</p>
-                        <p className="text-sm">Your passwords are unique and cryptographically strong.</p>
+                        <p className="text-sm">Your passwords are unique, strong, and haven't and haven't been seen in known breaches.</p>
                     </div>
                 )}
             </div>
