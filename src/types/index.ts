@@ -8,7 +8,6 @@ export interface BaseRecord {
     title: string;
     notes?: string;
     favorite?: boolean;
-    tags?: string[];
     customIcon?: string;
     createdAt: number;
     updatedAt: number;

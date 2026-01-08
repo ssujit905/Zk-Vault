@@ -145,11 +145,6 @@ export const VaultItemCard: React.FC<VaultItemCardProps> = ({ record, onEdit, on
                     <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
                             <h3 className="text-sm font-bold text-white truncate max-w-[120px]">{record.title}</h3>
-                            {record.tags && record.tags.map(tag => (
-                                <span key={tag} className="px-1.5 py-0.5 bg-primary-500/10 border border-primary-500/20 rounded text-[7px] font-black text-primary-400 uppercase tracking-widest shadow-sm">
-                                    {tag}
-                                </span>
-                            ))}
                         </div>
                         {record.type === 'login' && record.url && (
                             <button
