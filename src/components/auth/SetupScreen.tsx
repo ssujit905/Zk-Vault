@@ -42,7 +42,7 @@ export const SetupScreen: React.FC = () => {
 
                 <h1 className="text-2xl font-bold text-white mb-2">Welcome to Zk Vault</h1>
                 <p className="text-slate-400 mb-8 text-sm">
-                    Create a strong master password to secure your encrypted vault. This password is never stored and cannot be recovered.
+                    Create a strong master password to secure your encrypted vault. This password can be changed later, but it <b>cannot be recovered</b> if forgotten.
                 </p>
 
                 <form onSubmit={handleSubmit} className="space-y-4 text-left">
