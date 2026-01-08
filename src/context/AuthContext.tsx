@@ -91,7 +91,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
             return false;
         } catch (error) {
-            console.error('Unlock failed:', error);
+            // Use warn instead of error to avoid triggering the extension's error count for simple wrong passwords
+            console.warn('Unlock failed:', error);
             return false;
         }
     };

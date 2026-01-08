@@ -326,7 +326,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
             }, 1000);
 
         } catch (error) {
-            console.error('Failed to clear clipboard:', error);
+            console.warn('Failed to clear clipboard:', error);
         }
     }
 });
@@ -348,7 +348,7 @@ async function performPanicLock() {
         });
         setTimeout(() => closeOffscreenDocument(), 1000);
     } catch (e) {
-        console.error('Panic: Failed to clear clipboard', e);
+        console.warn('Panic: Failed to clear clipboard', e);
     }
 
     // 3. Notify all components

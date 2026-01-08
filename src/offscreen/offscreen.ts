@@ -11,8 +11,21 @@ chrome.runtime.onMessage.addListener((message) => {
 
 const handleClearClipboard = async (_: string) => {
     try {
+        // Method 1: Modern Clipboard API
         await navigator.clipboard.writeText('');
     } catch (e) {
-        console.error('Failed to clear clipboard', e);
+        // Method 2: Fallback using textarea + execCommand
+        // This is often more reliable in offscreen documents
+        try {
+            const textarea = document.getElementById('text') as HTMLTextAreaElement;
+            if (textarea) {
+                textarea.value = '';
+                textarea.select();
+                document.execCommand('copy');
+                // console.log('Clipboard cleared using fallback');
+            }
+        } catch (fallbackError) {
+            console.error('Failed to clear clipboard with all methods:', fallbackError);
+        }
     }
 };
