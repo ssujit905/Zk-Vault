@@ -75,9 +75,10 @@ export const BillingPanel: React.FC = () => {
                 'Admin Management Console',
                 'Priority Family Support'
             ],
-            cta: 'Get Family Plan',
+            cta: 'Coming Soon',
             icon: Users,
-            color: 'primary'
+            color: 'primary',
+            comingSoon: true
         }
     ];
 
@@ -136,8 +137,8 @@ export const BillingPanel: React.FC = () => {
                         <div className="w-full max-w-xs flex flex-col gap-3">
                             <button
                                 onClick={() => handleUpgrade(plan.id)}
-                                disabled={tier === plan.id || processing !== null}
-                                className={`w-full py-4 rounded-xl font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 ${tier === plan.id
+                                disabled={tier === plan.id || processing !== null || (plan as any).comingSoon}
+                                className={`w-full py-4 rounded-xl font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 ${tier === plan.id || (plan as any).comingSoon
                                     ? 'bg-white/5 text-slate-500 cursor-default border border-white/5'
                                     : plan.color === 'amber'
                                         ? 'bg-amber-500 text-black hover:bg-amber-400 shadow-[0_8px_25px_rgba(245,158,11,0.25)] active:scale-95'
@@ -149,7 +150,7 @@ export const BillingPanel: React.FC = () => {
                                 {processing === plan.id ? (
                                     <Loader2 size={16} className="animate-spin" />
                                 ) : (
-                                    tier === plan.id ? 'Current Plan' : plan.cta
+                                    tier === plan.id ? 'Current Plan' : (plan as any).comingSoon ? 'Coming Soon' : plan.cta
                                 )}
                             </button>
                             {plan.id !== 'free' && tier === 'free' && (
