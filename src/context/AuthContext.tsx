@@ -52,7 +52,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const exists = await storageService.hasVault();
             setHasVault(exists);
         } catch (error) {
-            console.error('Failed to check vault status:', error);
+            console.warn('Vault status check failed (usually non-critical)');
         } finally {
             setLoading(false);
         }
@@ -123,7 +123,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setHasVault(true);
             setIsAuthenticated(true);
         } catch (error) {
-            console.error('Setup failed:', error);
+            console.warn('Vault setup failed');
             throw error;
         }
     };
@@ -184,7 +184,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
             return true;
         } catch (error) {
-            console.error('Failed to change master password:', error);
+            console.warn('Master password change failed');
             return false;
         }
     };

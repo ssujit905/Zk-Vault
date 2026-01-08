@@ -93,7 +93,7 @@ export class CryptoService {
             const dec = new TextDecoder();
             return dec.decode(decryptedContent);
         } catch (error) {
-            throw new Error("Decryption failed. Invalid password or corrupted data.");
+            throw new Error("Proof invalid (incorrect password or corrupted storage)");
         }
     }
 

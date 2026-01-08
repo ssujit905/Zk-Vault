@@ -216,7 +216,7 @@ async function handleMessage(request: any, sender: chrome.runtime.MessageSender,
             sendResponse({ status: 'OK', credentials: matches });
 
         } catch (e) {
-            console.warn('Autofill error:', e);
+            console.warn('Autofill request failed (locked or invalid session)');
             sendResponse({ status: 'ERROR' });
         }
     }
@@ -297,7 +297,7 @@ async function handleMessage(request: any, sender: chrome.runtime.MessageSender,
                 await chrome.storage.local.set({ ['zk_vault_data']: storageData });
                 sendResponse({ status: 'SAVED' });
             } catch (e) {
-                console.warn('Add record direct error:', e);
+                console.warn('Direct record save failed (unauthorized)');
                 sendResponse({ status: 'ERROR' });
             }
         };
@@ -326,7 +326,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
             }, 1000);
 
         } catch (error) {
-            console.warn('Failed to clear clipboard:', error);
+            console.warn('Clipboard cleanup task deferred');
         }
     }
 });
@@ -348,7 +348,7 @@ async function performPanicLock() {
         });
         setTimeout(() => closeOffscreenDocument(), 1000);
     } catch (e) {
-        console.warn('Panic: Failed to clear clipboard', e);
+        console.warn('Panic cleanup partially incomplete');
     }
 
     // 3. Notify all components
