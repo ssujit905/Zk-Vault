@@ -2,8 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import {
-    Shield, CheckCircle, Lock, Crown, Zap, Database, Users, Heart,
-    ShieldAlert, ShieldCheck, Upload, LogOut, AlertTriangle, X,
+    Shield, CheckCircle, Lock, Crown, Zap, Database, Users,
+    ShieldAlert, ShieldCheck, Upload, LogOut, AlertTriangle,
     Settings, CreditCard, HardDrive
 } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -14,8 +14,6 @@ import { StatusPanel } from './components/StatusPanel';
 import { createEncryptedBackup, restoreFromEncryptedBackup } from './utils/backup';
 import { BillingPanel } from './components/BillingPanel';
 import { analyticsService } from './services/analytics';
-import { storageService } from './services/storage';
-import type { FamilyMember } from './types';
 
 const SecurityAudit: React.FC<{ onNavigate?: (view: string) => void }> = ({ onNavigate }) => {
     const { records } = useVault();
@@ -439,197 +437,60 @@ const DataManagement: React.FC = () => {
 
 const FamilySharing: React.FC<{ onNavigate?: (view: string) => void }> = ({ onNavigate }) => {
     const { tier } = useAuth();
-    const [members, setMembers] = useState<FamilyMember[]>([]);
-    const [showAddModal, setShowAddModal] = useState(false);
-    const [newMember, setNewMember] = useState({ name: '', email: '' });
-    const [loading, setLoading] = useState(false);
-
-    useEffect(() => {
-        loadMembers();
-    }, []);
-
-    const loadMembers = async () => {
-        const data = await storageService.getFamilyMembers();
-        setMembers(data);
-    };
-
-    const handleInvite = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-        await new Promise(r => setTimeout(r, 1000));
-
-        const member: FamilyMember = {
-            id: crypto.randomUUID(),
-            name: newMember.name,
-            email: newMember.email,
-            status: 'pending',
-            role: 'member',
-            emergencyAccess: false,
-            addedAt: Date.now()
-        };
-
-        const updated = [...members, member];
-        await storageService.saveFamilyMembers(updated);
-        setMembers(updated);
-        setNewMember({ name: '', email: '' });
-        setShowAddModal(false);
-        setLoading(false);
-        analyticsService.trackEvent('family_member_invited');
-    };
-
-    const removeMember = async (id: string) => {
-        if (!confirm('Are you sure? This will revoke their access.')) return;
-        const updated = members.filter(m => m.id !== id);
-        await storageService.saveFamilyMembers(updated);
-        setMembers(updated);
-    };
-
-    const toggleEmergency = async (id: string) => {
-        const updated = members.map(m =>
-            m.id === id ? { ...m, emergencyAccess: !m.emergencyAccess } : m
-        );
-        await storageService.saveFamilyMembers(updated);
-        setMembers(updated);
-    };
 
     if (tier !== 'family') {
         return (
-            <div className="glass-card p-12 flex flex-col items-center text-center animate-fade-in">
+            <div className="glass-card p-12 flex flex-col items-center text-center animate-fade-in max-w-2xl mx-auto">
                 <div className="w-20 h-20 bg-primary-500/10 rounded-3xl flex items-center justify-center mb-8 ring-1 ring-primary-500/30">
                     <Users className="text-primary-400" size={40} />
                 </div>
                 <h2 className="text-2xl font-black text-white mb-4 uppercase tracking-tight">Family Vault Sharing</h2>
+                <div className="px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full text-[9px] font-black text-amber-500 uppercase tracking-widest mb-6">
+                    Coming Soon to Zk Vault
+                </div>
                 <p className="text-slate-400 max-w-sm mb-10 text-sm leading-relaxed">
-                    Securely share logins and cards with up to 5 family members using end-to-end ZK encryption.
+                    Securely share logins and cards with up to 5 family members using end-to-end ZK encryption. Our engineering team is currently building the secure key-exchange protocol for this feature.
                 </p>
                 <button
                     onClick={() => onNavigate?.('billing')}
                     className="btn-primary px-12 py-4 text-xs font-black uppercase tracking-widest"
                 >
-                    Upgrade to Family
+                    Upgrade to Family Plan
                 </button>
             </div>
         );
     }
 
     return (
-        <div className="space-y-6 animate-fade-in">
-            <div className="glass-card p-8 bg-blue-950/5 border-blue-500/20">
-                <div className="flex flex-col sm:flex-row items-center justify-between mb-8 gap-6">
-                    <div className="flex items-center gap-3">
-                        <Users className="text-blue-400" size={24} />
-                        <h2 className="text-2xl font-bold text-white">Family Center</h2>
+        <div className="space-y-6 animate-fade-in max-w-2xl mx-auto">
+            <div className="glass-card p-8 bg-blue-950/5 border-blue-500/20 text-center relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent to-blue-500/[0.02] pointer-events-none"></div>
+                <div className="relative z-10 py-12">
+                    <div className="w-16 h-16 bg-blue-500/10 rounded-2xl flex items-center justify-center mb-6 mx-auto ring-1 ring-blue-500/20">
+                        <Users className="text-blue-400" size={32} />
                     </div>
-                    <button
-                        onClick={() => setShowAddModal(true)}
-                        disabled={members.length >= 5}
-                        className="btn-primary w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 text-[10px] font-black uppercase tracking-widest disabled:opacity-50"
-                    >
-                        Invite member ({members.length}/5)
-                    </button>
-                </div>
-
-                {members.length === 0 ? (
-                    <div className="text-center py-16 border-2 border-dashed border-white/5 rounded-2xl">
-                        <Heart className="text-slate-700 mx-auto mb-4" size={48} />
-                        <p className="text-slate-500 font-medium">No family members yet.</p>
-                        <p className="text-slate-600 text-xs mt-1">Invite your family to protect them.</p>
-                    </div>
-                ) : (
-                    <div className="grid gap-4">
-                        {members.map(member => (
-                            <div key={member.id} className="p-6 bg-white/[0.02] border border-white/5 rounded-2xl flex flex-col sm:flex-row items-center justify-between group hover:border-white/10 transition-colors gap-6">
-                                <div className="flex items-center gap-4 w-full sm:w-auto">
-                                    <div className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-lg font-bold ${member.status === 'active' ? 'bg-green-500/10 text-green-500' : 'bg-slate-800 text-slate-500'}`}>
-                                        {member.name.charAt(0)}
-                                    </div>
-                                    <div className="min-w-0">
-                                        <div className="flex items-center gap-2">
-                                            <h4 className="font-bold text-white truncate">{member.name}</h4>
-                                            {member.role === 'admin' && <span className="px-1.5 py-0.5 bg-primary-500/20 text-primary-400 text-[9px] rounded font-black uppercase">Admin</span>}
-                                        </div>
-                                        <div className="text-xs text-slate-500 flex flex-wrap items-center gap-2">
-                                            <span className="truncate max-w-[150px] sm:max-w-none">{member.email}</span> •
-                                            <span className={member.status === 'active' ? 'text-green-500' : 'text-amber-500'}>
-                                                {member.status === 'active' ? 'Protected' : 'Pending'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto">
-                                    <div className="flex flex-col items-end">
-                                        <label className="text-[9px] font-black uppercase text-slate-600 mb-1 cursor-help">Emergency</label>
-                                        <button
-                                            onClick={() => toggleEmergency(member.id)}
-                                            className={`w-10 h-5 rounded-full relative transition-colors ${member.emergencyAccess ? 'bg-red-500' : 'bg-slate-700'}`}
-                                        >
-                                            <div className={`absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-transform ${member.emergencyAccess ? 'translate-x-5' : ''}`}></div>
-                                        </button>
-                                    </div>
-                                    <button
-                                        onClick={() => removeMember(member.id)}
-                                        className="p-2 text-slate-600 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
-                                    >
-                                        <LogOut size={16} />
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
-
-            {showAddModal && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in">
-                    <div className="glass-card max-w-md w-full p-8 border-primary-500/30">
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-xl font-bold text-white">Invite Family Member</h3>
-                            <button onClick={() => setShowAddModal(false)} className="text-slate-500 hover:text-white"><X size={20} /></button>
+                    <div className="flex flex-col items-center gap-4 mb-8">
+                        <h2 className="text-lg font-black text-white tracking-[0.2em] uppercase">Family Center</h2>
+                        <div className="px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full text-[9px] font-black text-blue-400 uppercase tracking-widest">
+                            Under Development
                         </div>
-                        <form onSubmit={handleInvite} className="space-y-4">
-                            <div>
-                                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">Full Name</label>
-                                <input
-                                    type="text"
-                                    required
-                                    className="input-glass"
-                                    placeholder="Sarah Connor"
-                                    value={newMember.name}
-                                    onChange={e => setNewMember({ ...newMember, name: e.target.value })}
-                                />
-                            </div>
-                            <div>
-                                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">Email Address</label>
-                                <input
-                                    type="email"
-                                    required
-                                    className="input-glass"
-                                    placeholder="sarah@example.com"
-                                    value={newMember.email}
-                                    onChange={e => setNewMember({ ...newMember, email: e.target.value })}
-                                />
-                            </div>
-                            <div className="pt-4 flex gap-3">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowAddModal(false)}
-                                    className="flex-1 py-3 rounded-xl border border-white/10 text-slate-400 hover:bg-white/5 font-bold text-xs uppercase tracking-widest"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={loading}
-                                    className="flex-[2] btn-primary py-3 text-xs font-black uppercase tracking-widest"
-                                >
-                                    {loading ? 'Processing...' : 'Send Invitation'}
-                                </button>
-                            </div>
-                        </form>
+                    </div>
+                    <p className="text-sm text-slate-500 max-w-sm mx-auto leading-relaxed mb-10">
+                        The Family & Teams sharing infrastructure is currently being audited for zero-knowledge security compliance. Secure member invitations and shared vaults will be activated in an upcoming release.
+                    </p>
+                    <div className="flex flex-col gap-3 max-w-xs mx-auto">
+                        <button
+                            disabled
+                            className="w-full py-4 bg-white/5 border border-white/5 rounded-xl text-[10px] font-black text-slate-600 uppercase tracking-widest cursor-not-allowed"
+                        >
+                            Invitations Locked
+                        </button>
+                        <span className="text-[9px] text-slate-600 font-bold uppercase tracking-widest">
+                            Estimated Deployment: Q1 2026
+                        </span>
                     </div>
                 </div>
-            )}
+            </div>
         </div>
     );
 };
