@@ -199,25 +199,34 @@ const SecuritySettings: React.FC = () => {
     };
 
     return (
-        <div className="glass-card p-8 animate-fade-in">
-            <div className="flex items-center gap-3 mb-8">
+        <div className="glass-card p-8 animate-fade-in max-w-2xl mx-auto">
+            <div className="flex items-center gap-3 mb-8 border-b border-white/5 pb-6">
                 <Lock className="text-primary-400" size={24} />
-                <h2 className="text-2xl font-bold text-white">Master Password</h2>
+                <h2 className="text-lg font-black text-white tracking-[0.2em] uppercase leading-tight">Master Password</h2>
             </div>
 
             <form onSubmit={handlePasswordChange} className="space-y-6">
-                <div>
-                    <label className="block text-[10px] font-black text-slate-500 mb-2 uppercase tracking-widest pl-1">Current Master Password</label>
-                    <input
-                        type="password"
-                        value={oldPassword}
-                        onChange={(e) => setOldPassword(e.target.value)}
-                        className="input-glass"
-                        required
-                        placeholder="••••••••••••••••"
-                    />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {msg.text && (
+                    <div className={`p-4 rounded-xl text-xs font-bold flex items-center gap-3 ${msg.type === 'success' ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
+                        'bg-red-500/10 text-red-400 border border-red-500/20'
+                        }`}>
+                        {msg.type === 'success' ? <CheckCircle size={16} /> : <AlertTriangle size={16} />}
+                        {msg.text}
+                    </div>
+                )}
+
+                <div className="space-y-6">
+                    <div>
+                        <label className="block text-[10px] font-black text-slate-500 mb-2 uppercase tracking-widest pl-1">Current Master Password</label>
+                        <input
+                            type="password"
+                            value={oldPassword}
+                            onChange={(e) => setOldPassword(e.target.value)}
+                            className="input-glass"
+                            required
+                            placeholder="••••••••••••••••"
+                        />
+                    </div>
                     <div>
                         <label className="block text-[10px] font-black text-slate-500 mb-2 uppercase tracking-widest pl-1">New Password</label>
                         <input
@@ -242,22 +251,18 @@ const SecuritySettings: React.FC = () => {
                     </div>
                 </div>
 
-                {msg.text && (
-                    <div className={`p-4 rounded-xl text-xs font-bold flex items-center gap-3 ${msg.type === 'success' ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
-                        'bg-red-500/10 text-red-400 border border-red-500/20'
-                        }`}>
-                        {msg.type === 'success' ? <CheckCircle size={16} /> : <AlertTriangle size={16} />}
-                        {msg.text}
-                    </div>
-                )}
-
-                <button
-                    type="submit"
-                    disabled={loading}
-                    className="btn-primary w-full md:w-auto px-10 py-4 text-xs font-black uppercase tracking-widest"
-                >
-                    {loading ? 'Re-encrypting Vault...' : 'Update Master Password'}
-                </button>
+                <div className="pt-4">
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="btn-primary w-full py-4 text-xs font-black uppercase tracking-widest rounded-xl"
+                    >
+                        {loading ? 'Re-encrypting Vault...' : 'Update Master Password'}
+                    </button>
+                    <p className="mt-4 text-center text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+                        Your entire vault will be re-encrypted with new keys
+                    </p>
+                </div>
             </form>
         </div>
     );
