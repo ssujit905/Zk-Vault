@@ -441,7 +441,7 @@ const DataManagement: React.FC = () => {
                         </div>
                         <h3 className="text-xl font-bold text-white">Restore / Import Data</h3>
                         <p className="text-sm text-slate-400 leading-relaxed mb-6">
-                            Restore a previous Zk Vault backup or import credentials from compatible password managers.
+                            Restore a previous Zk Vault backup or import credentials from compatible password managers. Please upload your data in <b>.json</b> format.
                         </p>
                         <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".json" className="hidden" />
                         <button

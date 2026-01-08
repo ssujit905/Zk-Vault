@@ -44,7 +44,7 @@ export const BillingPanel: React.FC = () => {
         {
             id: 'pro',
             name: 'Zk Vault Pro',
-            price: '$2.99',
+            price: '$3.99',
             period: '/mo',
             description: 'Advanced power for security professionals.',
             features: [
