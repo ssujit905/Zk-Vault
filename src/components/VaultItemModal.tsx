@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Wand2, Lock, FileText, User, CreditCard, Crown } from 'lucide-react';
+import { X, Wand2, Lock, FileText, User, CreditCard, Crown, Tag, Sparkles, Hash } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import type { VaultRecord, VaultItemType } from '../types';
 import { PasswordGenerator } from './PasswordGenerator';
@@ -23,11 +23,27 @@ export const VaultItemModal: React.FC<VaultItemModalProps> = ({
     const [saving, setSaving] = useState(false);
     const [showGenerator, setShowGenerator] = useState(false);
     const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
+    const [tagInput, setTagInput] = useState('');
+
+    const PRESET_ICONS = [
+        { id: 'google', label: 'Google' },
+        { id: 'facebook', label: 'Facebook' },
+        { id: 'apple', label: 'Apple' },
+        { id: 'github', label: 'GitHub' },
+        { id: 'netflix', label: 'Netflix' },
+        { id: 'amazon', label: 'Amazon' },
+        { id: 'twitter', label: 'Twitter' },
+        { id: 'microsoft', label: 'Microsoft' }
+    ];
 
     useEffect(() => {
         if (editRecord) {
             setType(editRecord.type);
-            setFormData(editRecord);
+            setFormData({
+                ...editRecord,
+                tags: editRecord.tags || [],
+                customIcon: editRecord.customIcon || ''
+            });
             if (tier === 'free' && (editRecord.type === 'identity' || editRecord.type === 'card')) {
                 setShowUpgradePrompt(true);
             } else {
@@ -42,11 +58,33 @@ export const VaultItemModal: React.FC<VaultItemModalProps> = ({
                 password: '',
                 url: '',
                 notes: '',
+                tags: [],
+                customIcon: ''
             });
             setShowUpgradePrompt(false);
         }
         setShowGenerator(false);
+        setTagInput('');
     }, [editRecord, isOpen, tier]);
+
+    const addTag = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && tagInput.trim()) {
+            e.preventDefault();
+            const newTags = [...(formData.tags || [])];
+            if (!newTags.includes(tagInput.trim())) {
+                newTags.push(tagInput.trim());
+                setFormData({ ...formData, tags: newTags });
+            }
+            setTagInput('');
+        }
+    };
+
+    const removeTag = (tagToRemove: string) => {
+        setFormData({
+            ...formData,
+            tags: (formData.tags || []).filter((t: string) => t !== tagToRemove)
+        });
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -322,6 +360,63 @@ export const VaultItemModal: React.FC<VaultItemModalProps> = ({
                                     </div>
                                 </div>
                             </>
+                        )}
+
+                        {/* Organization (Pro Content) */}
+                        {(tier === 'pro' || tier === 'family') && (
+                            <div className="space-y-4 pt-2 border-t border-white/5">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <Sparkles size={14} className="text-amber-500" />
+                                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Vault Organization</h4>
+                                </div>
+
+                                {/* Custom Icon Picker */}
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Brand Identity</label>
+                                    <div className="grid grid-cols-4 gap-2">
+                                        {PRESET_ICONS.map(icon => (
+                                            <button
+                                                key={icon.id}
+                                                type="button"
+                                                onClick={() => setFormData({ ...formData, customIcon: icon.id === formData.customIcon ? '' : icon.id })}
+                                                className={`py-2 rounded-lg border text-[9px] font-black uppercase tracking-tighter transition-all ${formData.customIcon === icon.id
+                                                    ? 'bg-primary-500/20 border-primary-500/50 text-white shadow-lg shadow-primary-500/10'
+                                                    : 'bg-white/5 border-white/5 text-slate-500 hover:bg-white/10 hover:text-slate-300'
+                                                    }`}
+                                            >
+                                                {icon.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Custom Tags */}
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Custom Labels</label>
+                                    <div className="flex flex-wrap gap-2 mb-3">
+                                        {(formData.tags || []).map((tag: string) => (
+                                            <span key={tag} className="flex items-center gap-1.5 px-2.5 py-1 bg-primary-500/10 border border-primary-500/20 rounded-full text-[10px] font-bold text-primary-400">
+                                                <Hash size={10} />
+                                                {tag}
+                                                <button type="button" onClick={() => removeTag(tag)} className="hover:text-white ml-1">
+                                                    <X size={10} />
+                                                </button>
+                                            </span>
+                                        ))}
+                                    </div>
+                                    <div className="relative">
+                                        <Tag className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
+                                        <input
+                                            type="text"
+                                            value={tagInput}
+                                            onChange={(e) => setTagInput(e.target.value)}
+                                            onKeyDown={addTag}
+                                            className="input-glass pl-10 text-xs"
+                                            placeholder="Press Enter to add tag (e.g. Work, Finance)"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
                         )}
 
                         {(type !== 'note') && (
