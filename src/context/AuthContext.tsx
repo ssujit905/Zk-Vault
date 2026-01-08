@@ -91,8 +91,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
             return false;
         } catch (error) {
-            // Use warn instead of error to avoid triggering the extension's error count for simple wrong passwords
-            console.warn('Unlock failed:', error);
+            // Log a simple string instead of the Error object to prevent Chrome from tracking stack traces as critical errors
+            console.warn('Unlock attempt failed: Invalid password or proof.');
             return false;
         }
     };

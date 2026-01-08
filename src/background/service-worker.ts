@@ -216,7 +216,7 @@ async function handleMessage(request: any, sender: chrome.runtime.MessageSender,
             sendResponse({ status: 'OK', credentials: matches });
 
         } catch (e) {
-            console.error(e);
+            console.warn('Autofill error:', e);
             sendResponse({ status: 'ERROR' });
         }
     }
@@ -297,7 +297,7 @@ async function handleMessage(request: any, sender: chrome.runtime.MessageSender,
                 await chrome.storage.local.set({ ['zk_vault_data']: storageData });
                 sendResponse({ status: 'SAVED' });
             } catch (e) {
-                console.error(e);
+                console.warn('Add record direct error:', e);
                 sendResponse({ status: 'ERROR' });
             }
         };

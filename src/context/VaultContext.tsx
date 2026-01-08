@@ -47,7 +47,7 @@ export const VaultProvider: React.FC<{ children: ReactNode }> = ({ children }) =
                     ...data
                 } as VaultRecord);
             } catch (e) {
-                console.error(`Failed to decrypt record ${record.id}`, e);
+                console.warn(`Failed to decrypt record ${record.id}`, e);
             }
         }
         return decrypted;
@@ -67,7 +67,7 @@ export const VaultProvider: React.FC<{ children: ReactNode }> = ({ children }) =
                 setRecords(decrypted);
             }
         } catch (error) {
-            console.error('Failed to load records:', error);
+            console.warn('Failed to load records:', error);
         } finally {
             setLoading(false);
         }
