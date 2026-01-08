@@ -1,73 +1,33 @@
-# React + TypeScript + Vite
+# Zk Vault - Premium Zero-Knowledge Password Manager
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Zk Vault is a modern, high-performance Chrome extension designed to provide maximum security for your digital credentials using local-first encryption and Zero-Knowledge principles.
 
-Currently, two official plugins are available:
+## ✨ Key Features
+- **Zero-Knowledge Security**: Your data is encrypted locally. We never see your secrets.
+- **Advanced Cryptography**: Uses AES-GCM (256-bit) and PBKDF2 (100k iterations).
+- **Dark Web Monitoring**: Integrated "Have I Been Pwned" (HIBP) checks using k-Anonymity.
+- **Smart Autofill**: Seamless login detection and credential filling.
+- **Security Audit**: Automated password health scores and breach alerts.
+- **Emergency Panic Lock**: Instantly secure your vault and clear clipboard data.
+- **Premium UX**: High-end Glassmorphic UI with smooth micro-animations.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 🛠️ Tech Stack
+- **Framework**: React 18 + Vite
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS + Vanilla CSS
+- **Security**: Web Crypto API
+- **Icons**: Lucide React
 
-## React Compiler
+## 📖 Documentation
+Detailed technical specifications, including encryption specifics and architecture patterns, can be found in our technical guide:
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+👉 **[PROJECT_TECHNICAL_DOCS.md](./PROJECT_TECHNICAL_DOCS.md)**
 
-## Expanding the ESLint configuration
+## 🚀 Getting Started
+1. Clone the repository.
+2. Install dependencies: `npm install`
+3. Build the project: `npm run build`
+4. Load the `dist` folder into Chrome via `chrome://extensions` (Load Unpacked).
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
-
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+---
+*Built with ❤️ for Security Professionals.*
