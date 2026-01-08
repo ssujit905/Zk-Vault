@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Copy, Eye, EyeOff, Edit2, Trash2, ExternalLink, Check, Lock, FileText, User, CreditCard, Hash } from 'lucide-react';
+import { Copy, Eye, EyeOff, Edit2, Trash2, ExternalLink, Check, Lock, FileText, User, CreditCard } from 'lucide-react';
 import type { VaultRecord } from '../types';
 
 interface VaultItemCardProps {
@@ -28,11 +28,26 @@ export const VaultItemCard: React.FC<VaultItemCardProps> = ({ record, onEdit, on
 
     const getTypeIcon = () => {
         if (record.customIcon) {
-            return (
-                <div className="flex items-center justify-center w-[18px] h-[18px] text-[8px] font-black uppercase text-primary-400">
-                    {record.customIcon.substring(0, 2)}
-                </div>
-            );
+            const domains: Record<string, string> = {
+                google: 'google.com',
+                facebook: 'facebook.com',
+                apple: 'apple.com',
+                github: 'github.com',
+                netflix: 'netflix.com',
+                amazon: 'amazon.com',
+                twitter: 'twitter.com',
+                microsoft: 'microsoft.com'
+            };
+            const domain = domains[record.customIcon];
+            if (domain) {
+                return (
+                    <img
+                        src={`https://www.google.com/s2/favicons?sz=64&domain=${domain}`}
+                        alt={record.customIcon}
+                        className="w-[18px] h-[18px] rounded shadow-sm"
+                    />
+                );
+            }
         }
 
         switch (record.type) {
@@ -124,22 +139,22 @@ export const VaultItemCard: React.FC<VaultItemCardProps> = ({ record, onEdit, on
         <div className="glass-card-hover p-4 animate-slide-up">
             <div className="flex items-start justify-between mb-3">
                 <div className="flex-1 flex items-center gap-3">
-                    <div className="p-2 bg-white/5 rounded-lg transition-all">
+                    <div className="p-2 bg-white/5 rounded-lg transition-all min-w-[34px] flex items-center justify-center">
                         {getTypeIcon()}
                     </div>
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <h3 className="text-lg font-semibold text-white truncate max-w-[150px]">{record.title}</h3>
-                            {record.customIcon && (
-                                <span className="px-1.5 py-0.5 bg-primary-500/10 border border-primary-500/20 rounded text-[8px] font-black text-primary-400 uppercase tracking-widest">
-                                    {record.customIcon}
+                    <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="text-sm font-bold text-white truncate max-w-[120px]">{record.title}</h3>
+                            {record.tags && record.tags.map(tag => (
+                                <span key={tag} className="px-1.5 py-0.5 bg-primary-500/10 border border-primary-500/20 rounded text-[7px] font-black text-primary-400 uppercase tracking-widest shadow-sm">
+                                    {tag}
                                 </span>
-                            )}
+                            ))}
                         </div>
                         {record.type === 'login' && record.url && (
                             <button
                                 onClick={() => window.open(record.url?.startsWith('http') ? record.url : `https://${record.url}`, '_blank')}
-                                className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1 transition-colors"
+                                className="text-[10px] text-primary-400 hover:text-primary-300 flex items-center gap-1 transition-colors mt-0.5"
                             >
                                 {record.url}
                                 <ExternalLink size={10} />
@@ -166,17 +181,6 @@ export const VaultItemCard: React.FC<VaultItemCardProps> = ({ record, onEdit, on
             {record.notes && record.type !== 'note' && (
                 <div className="mt-2 bg-white/5 rounded-lg px-3 py-2 text-xs text-slate-400 truncate">
                     {record.notes}
-                </div>
-            )}
-
-            {record.tags && record.tags.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-1.5 pt-3 border-t border-white/5">
-                    {record.tags.map(tag => (
-                        <span key={tag} className="flex items-center gap-1 px-2 py-0.5 bg-white/5 rounded text-[8px] font-bold text-slate-400 uppercase tracking-widest">
-                            <Hash size={8} />
-                            {tag}
-                        </span>
-                    ))}
                 </div>
             )}
 
