@@ -49,63 +49,67 @@ export const StatusPanel: React.FC<{ compact?: boolean; onNavigate?: (view: stri
 
     return (
         <div className="glass-card p-8 space-y-8 animate-fade-in">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4 border-b border-white/5 pb-6">
                 <div className="flex items-center gap-3">
                     <Shield className="text-primary-400" size={24} />
-                    <h2 className="text-2xl font-bold text-white tracking-tight uppercase">Vault Intelligence</h2>
+                    <h2 className="text-2xl font-black text-white tracking-widest uppercase">Vault Intelligence</h2>
                 </div>
-                <div className="flex items-center gap-3">
-                    <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border transition-colors ${tier === 'free' ? 'bg-slate-500/10 text-slate-500 border-white/5' :
-                        tier === 'pro' ? 'bg-amber-500/10 text-amber-500 border-amber-500/30' :
-                            'bg-primary-500/10 text-primary-400 border-primary-500/30 shadow-[0_0_15px_rgba(14,165,233,0.15)]'
-                        }`}>
-                        {tier} Subscription
-                    </div>
-                    <div className={`px-3 py-1 rounded-full text-[10px] font-black border uppercase tracking-widest ${isAuthenticated
-                        ? 'bg-green-500/10 text-green-400 border-green-500/20'
-                        : 'bg-red-500/10 text-red-500 border-red-500/20'
-                        }`}>
-                        {isAuthenticated ? 'Secure Session' : 'Locked'}
-                    </div>
+                <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border transition-all ${tier === 'free' ? 'bg-slate-500/10 text-slate-500 border-white/5 opacity-50' :
+                    tier === 'pro' ? 'bg-amber-500/10 text-amber-500 border-amber-500/30' :
+                        'bg-primary-500/10 text-primary-400 border-primary-500/30'
+                    }`}>
+                    {tier} Plan
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div className="p-5 bg-white/[0.02] rounded-2xl border border-white/5 hover:border-white/10 transition-colors group">
-                    <div className="flex items-center gap-2 text-slate-500 text-[10px] mb-3 uppercase font-black tracking-[0.2em] group-hover:text-primary-400 transition-colors">
-                        <Activity size={14} className="text-primary-500" />
-                        Memory Status
+            <div className="flex flex-col gap-3">
+                {/* Session Status Row */}
+                <div className="flex items-center justify-between p-4 bg-white/[0.02] rounded-xl border border-white/5">
+                    <div className="flex items-center gap-3">
+                        <ShieldCheck size={16} className={isAuthenticated ? "text-green-500" : "text-red-500"} />
+                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Session Status</span>
                     </div>
-                    <div className="text-sm text-slate-200 font-mono flex items-center gap-2">
-                        {masterKey ? (
-                            <>
-                                <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
-                                AES-256-GCM
-                            </>
-                        ) : 'No Keys Loaded'}
-                    </div>
-                </div>
-
-                <div className="p-5 bg-white/[0.02] rounded-2xl border border-white/5 hover:border-white/10 transition-colors group">
-                    <div className="flex items-center gap-2 text-slate-500 text-[10px] mb-3 uppercase font-black tracking-[0.2em] group-hover:text-amber-400 transition-colors">
-                        <Clock size={14} className="text-amber-500" />
-                        Session Uptime
-                    </div>
-                    <div className="text-sm text-slate-200 flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></div>
-                        {isAuthenticated ? uptime : 'Offline'}
+                    <div className="flex items-center gap-2">
+                        <div className={`w-1.5 h-1.5 rounded-full ${isAuthenticated ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+                        <span className={`text-[11px] font-bold uppercase tracking-widest ${isAuthenticated ? 'text-green-400' : 'text-red-400'}`}>
+                            {isAuthenticated ? 'Authenticated & Secure' : 'Locked'}
+                        </span>
                     </div>
                 </div>
 
-                <div className="p-5 bg-white/[0.02] rounded-2xl border border-white/5 hover:border-white/10 transition-colors group">
-                    <div className="flex items-center gap-2 text-slate-500 text-[10px] mb-3 uppercase font-black tracking-[0.2em] group-hover:text-green-400 transition-colors">
-                        <Database size={14} className="text-green-500" />
-                        Total Items
+                {/* Records Row */}
+                <div className="flex items-center justify-between p-4 bg-white/[0.02] rounded-xl border border-white/5">
+                    <div className="flex items-center gap-3">
+                        <Database size={16} className="text-green-500" />
+                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Vault Capacity</span>
                     </div>
-                    <div className="text-sm text-slate-200 flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
+                    <span className="text-[11px] font-bold text-white uppercase tracking-widest">
                         {records.length} Encrypted Records
+                    </span>
+                </div>
+
+                {/* Uptime Row */}
+                <div className="flex items-center justify-between p-4 bg-white/[0.02] rounded-xl border border-white/5">
+                    <div className="flex items-center gap-3">
+                        <Clock size={16} className="text-amber-500" />
+                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Session Uptime</span>
                     </div>
+                    <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-bold text-white font-mono uppercase tracking-widest">
+                            {isAuthenticated ? uptime : 'Offline'}
+                        </span>
+                    </div>
+                </div>
+
+                {/* Encryption Row */}
+                <div className="flex items-center justify-between p-4 bg-white/[0.02] rounded-xl border border-white/5">
+                    <div className="flex items-center gap-3">
+                        <Activity size={16} className="text-primary-400" />
+                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Security Protocol</span>
+                    </div>
+                    <span className="text-[11px] font-bold text-slate-300 font-mono uppercase tracking-widest">
+                        {masterKey ? 'AES-256-GCM / PBKDF2' : 'Standby'}
+                    </span>
                 </div>
             </div>
 
