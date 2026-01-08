@@ -52,7 +52,7 @@ export const StatusPanel: React.FC<{ compact?: boolean; onNavigate?: (view: stri
             <div className="flex flex-col md:flex-row items-center justify-between gap-4 border-b border-white/5 pb-6">
                 <div className="flex items-center gap-3">
                     <Shield className="text-primary-400" size={24} />
-                    <h2 className="text-2xl font-black text-white tracking-widest uppercase">Vault Intelligence</h2>
+                    <h2 className="text-lg font-black text-white tracking-[0.2em] uppercase">Vault Intelligence</h2>
                 </div>
                 <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border transition-all ${tier === 'free' ? 'bg-slate-500/10 text-slate-500 border-white/5 opacity-50' :
                     tier === 'pro' ? 'bg-amber-500/10 text-amber-500 border-amber-500/30' :
