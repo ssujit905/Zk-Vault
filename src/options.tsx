@@ -332,15 +332,15 @@ const DataManagement: React.FC = () => {
     };
 
     return (
-        <div className="space-y-6 animate-fade-in">
+        <div className="space-y-6 animate-fade-in max-w-2xl mx-auto">
             <div className="glass-card p-8">
-                <div className="flex items-center gap-3 mb-8">
+                <div className="flex items-center gap-3 mb-8 border-b border-white/5 pb-6">
                     <Database className="text-primary-400" size={24} />
-                    <h2 className="text-2xl font-bold text-white leading-tight">Vault Control</h2>
+                    <h2 className="text-lg font-black text-white tracking-[0.2em] uppercase leading-tight">Vault Control</h2>
                 </div>
 
                 {statusMsg.text && (
-                    <div className={`mb-6 p-4 rounded-xl text-xs font-bold border ${statusMsg.type === 'success' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+                    <div className={`mb-8 p-4 rounded-xl text-xs font-bold border ${statusMsg.type === 'success' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
                         statusMsg.type === 'error' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
                             'bg-primary-500/10 text-primary-400 border-primary-500/20'
                         }`}>
@@ -348,58 +348,69 @@ const DataManagement: React.FC = () => {
                     </div>
                 )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                <div className="flex flex-col gap-10">
+                    {/* Export Section */}
                     <div className="space-y-4">
-                        <h3 className="text-lg font-bold text-white">Export Backup</h3>
+                        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+                            <ShieldCheck size={14} className="text-primary-400" />
+                            Data Portability
+                        </div>
+                        <h3 className="text-xl font-bold text-white">Export Secure Backup</h3>
                         <p className="text-sm text-slate-400 leading-relaxed mb-6">
-                            Create a secure, encrypted backup of all your data. This data cannot be read without the backup password.
+                            Create a secure, encrypted backup of all your data. This file is cryptographically locked and cannot be read without your chosen backup password.
                         </p>
                         <button
                             onClick={handleEncryptedExport}
-                            className="btn-primary w-full flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest py-4"
+                            className="btn-primary w-full flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest py-4 rounded-xl"
                             disabled={vaultLoading || importing}
                         >
                             <ShieldCheck size={18} />
-                            Secure Backup
+                            Generate Encrypted Export
                         </button>
                     </div>
 
-                    <div className="space-y-4 border-t md:border-t-0 md:border-l border-white/5 pt-6 md:pt-0 md:pl-10">
-                        <h3 className="text-lg font-bold text-white">Restore Data</h3>
+                    {/* Import Section */}
+                    <div className="space-y-4 pt-10 border-t border-white/5">
+                        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+                            <Upload size={14} className="text-amber-500" />
+                            Data Migration
+                        </div>
+                        <h3 className="text-xl font-bold text-white">Restore / Import Data</h3>
                         <p className="text-sm text-slate-400 leading-relaxed mb-6">
-                            Import passwords from other managers or restore a previous Zk Vault backup.
+                            Restore a previous Zk Vault backup or import credentials from compatible password managers.
                         </p>
                         <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".json" className="hidden" />
                         <button
                             onClick={handleImportClick}
-                            className="btn-secondary w-full flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest py-4"
+                            className="btn-secondary w-full flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest py-4 rounded-xl"
                             disabled={importing || vaultLoading}
                         >
                             <Upload size={18} />
-                            {importing ? 'Processing...' : 'Restore backup'}
+                            {importing ? 'Processing Data...' : 'Upload & Restore backup'}
                         </button>
                     </div>
                 </div>
             </div>
 
+            {/* Emergency Zone */}
             <div className="glass-card p-8 border-red-900/20 bg-red-950/5">
-                <div className="flex items-center gap-3 mb-6 text-red-500">
+                <div className="flex items-center gap-3 mb-6 text-red-500 border-b border-red-500/10 pb-4">
                     <AlertTriangle size={24} />
-                    <h2 className="text-2xl font-bold leading-tight">Destroy Data</h2>
+                    <h2 className="text-lg font-black tracking-[0.2em] uppercase leading-tight">Emergency Zone</h2>
                 </div>
-                <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                    <p className="text-sm text-slate-500 max-w-lg mb-2 sm:mb-0">
-                        This action will wipe your local vault and settings. Data cannot be recovered unless you have a backup.
+                <div className="space-y-6">
+                    <p className="text-sm text-slate-500 leading-relaxed">
+                        This action will <span className="text-red-500 font-bold uppercase tracking-tight">permanently wipe</span> your local vault and all settings. Data cannot be recovered unless you have an external backup file.
                     </p>
                     <button
-                        className="btn-danger w-full md:w-auto px-8 py-4 text-xs font-black uppercase tracking-widest whitespace-nowrap"
+                        className="btn-danger w-full py-4 text-xs font-black uppercase tracking-widest rounded-xl"
                         onClick={() => {
                             if (confirm('CRITICAL: This will destroy your local vault permanently. Proceed?')) {
                                 chrome.storage.local.clear(() => chrome.runtime.reload());
                             }
                         }}
                     >
-                        Factory Reset
+                        Destroy and Reset Local Vault
                     </button>
                 </div>
             </div>
