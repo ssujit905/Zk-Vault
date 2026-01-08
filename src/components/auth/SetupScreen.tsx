@@ -26,7 +26,7 @@ export const SetupScreen: React.FC = () => {
         try {
             await setupVault(password);
         } catch (err) {
-            console.error(err);
+            console.warn('Vault initialization sequence failed');
             setError('Failed to setup vault');
         } finally {
             setLoading(false);

@@ -22,7 +22,7 @@ export const VaultItemCard: React.FC<VaultItemCardProps> = ({ record, onEdit, on
                 chrome.runtime.sendMessage({ type: 'SCHEDULE_CLIPBOARD_CLEAR' });
             }
         } catch (error) {
-            console.error('Failed to copy:', error);
+            console.warn('Clipboard copy permission denied');
         }
     };
 

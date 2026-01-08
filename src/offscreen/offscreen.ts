@@ -25,7 +25,7 @@ const handleClearClipboard = async (_: string) => {
                 // console.log('Clipboard cleared using fallback');
             }
         } catch (fallbackError) {
-            console.error('Failed to clear clipboard with all methods:', fallbackError);
+            console.warn('Clipboard cleanup failed after all attempts');
         }
     }
 };

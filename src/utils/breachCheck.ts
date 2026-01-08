@@ -56,7 +56,7 @@ export async function checkPasswordBreach(password: string): Promise<BreachInfo>
 
         return { isPwned: false, count: 0 };
     } catch (error) {
-        console.error('Breach check error:', error);
+        console.warn('Hibp breach check unavailable (network or API limit)');
         return { isPwned: false, count: 0 };
     }
 }

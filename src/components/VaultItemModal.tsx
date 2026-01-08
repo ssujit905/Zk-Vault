@@ -70,7 +70,7 @@ export const VaultItemModal: React.FC<VaultItemModalProps> = ({
             await onSave({ ...formData, type });
             onClose();
         } catch (error) {
-            console.error('Failed to save record:', error);
+            console.warn('Vault item storage failed');
         } finally {
             setSaving(false);
         }
