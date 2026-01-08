@@ -771,12 +771,12 @@ const OptionsContent: React.FC = () => {
 
             {/* MAIN CONTENT AREA */}
             <main className="max-w-5xl mx-auto px-6 sm:px-8 py-12 sm:py-16">
-                <div className="mb-12 flex flex-col sm:flex-row items-baseline justify-between border-b border-white/5 pb-8 gap-4">
+                <div className="mb-12 flex flex-col items-center text-center border-b border-white/5 pb-8 gap-6">
                     <div>
-                        <h1 className="text-4xl sm:text-5xl font-black text-white tracking-tighter mb-2 break-words">{getViewTitle()}</h1>
-                        <p className="text-slate-500 font-medium font-mono text-[10px] uppercase tracking-[0.3em]">Status: <span className="text-green-500">Authorized Session</span></p>
+                        <h1 className="text-xl sm:text-2xl font-black text-white tracking-[0.2em] mb-3 break-words uppercase">{getViewTitle()}</h1>
+                        <p className="text-slate-500 font-medium font-mono text-[10px] uppercase tracking-[0.3em]">Status: <span className="text-green-500 animate-pulse">Authorized Session</span></p>
                     </div>
-                    <div className="w-full sm:w-auto">
+                    <div className="w-full max-w-sm">
                         <StatusPanel compact />
                     </div>
                 </div>
