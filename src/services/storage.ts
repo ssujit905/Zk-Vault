@@ -1,4 +1,4 @@
-import type { VaultData, StorageData, UserTier, FamilyMember } from '../types';
+import type { VaultData, StorageData, UserTier, FamilyMember, UserSettings } from '../types';
 
 const STORAGE_KEY = 'zk_vault_data';
 
@@ -94,6 +94,36 @@ class StorageService {
             chrome.storage.local.get([STORAGE_KEY], (result) => {
                 const storageData = (result[STORAGE_KEY] || {}) as StorageData;
                 storageData.familyMembers = members;
+                chrome.storage.local.set({ [STORAGE_KEY]: storageData }, () => {
+                    if (chrome.runtime.lastError) reject(chrome.runtime.lastError);
+                    else resolve();
+                });
+            });
+        });
+    }
+
+    async getSettings(): Promise<UserSettings> {
+        return new Promise((resolve) => {
+            chrome.storage.local.get([STORAGE_KEY], (result) => {
+                const storageData = result[STORAGE_KEY] as StorageData | undefined;
+                const defaultSettings: UserSettings = {
+                    autoLockTimeout: 30,
+                    clipboardClearTimeout: 30,
+                    theme: 'dark',
+                    lockOnBrowserLock: true,
+                    lockOnWindowBlur: false,
+                    lockOnPageNavigation: false
+                };
+                resolve({ ...defaultSettings, ...(storageData?.settings || {}) });
+            });
+        });
+    }
+
+    async saveSettings(settings: UserSettings): Promise<void> {
+        return new Promise((resolve, reject) => {
+            chrome.storage.local.get([STORAGE_KEY], (result) => {
+                const storageData = (result[STORAGE_KEY] || {}) as StorageData;
+                storageData.settings = settings;
                 chrome.storage.local.set({ [STORAGE_KEY]: storageData }, () => {
                     if (chrome.runtime.lastError) reject(chrome.runtime.lastError);
                     else resolve();

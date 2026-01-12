@@ -6,6 +6,7 @@ export interface EncryptedBackup {
     salt: string;
     iv: string;
     ciphertext: string;
+    checksum: string; // SHA-256 of ciphertext
 }
 
 export const createEncryptedBackup = async (
@@ -13,7 +14,8 @@ export const createEncryptedBackup = async (
     password: string
 ): Promise<EncryptedBackup> => {
     const salt = cryptoService.generateSalt();
-    const key = await cryptoService.deriveKey(password, salt);
+    // Use Argon2id for backup key derivation for maximum security
+    const key = await cryptoService.deriveKey(password, salt, 'argon2id');
 
     const dataToEncrypt = {
         records,
@@ -24,11 +26,16 @@ export const createEncryptedBackup = async (
     const jsonStr = JSON.stringify(dataToEncrypt);
     const { ciphertext, iv } = await cryptoService.encrypt(jsonStr, key);
 
+    // Generate integrity checksum
+    const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(ciphertext));
+    const checksum = cryptoService.arrayBufferToBase64(hashBuffer);
+
     return {
-        version: 1,
+        version: 2,
         salt: uint8ArrayToBase64(salt),
         iv,
-        ciphertext
+        ciphertext,
+        checksum
     };
 };
 
@@ -36,8 +43,18 @@ export const restoreFromEncryptedBackup = async (
     backup: EncryptedBackup,
     password: string
 ): Promise<VaultRecord[]> => {
+    // 1. Verify Integrity first
+    if (backup.checksum) {
+        const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(backup.ciphertext));
+        const currentChecksum = cryptoService.arrayBufferToBase64(hashBuffer);
+        if (currentChecksum !== backup.checksum) {
+            throw new Error('Integrity check failed: Backup file appears corrupted or tampered with.');
+        }
+    }
+
     const salt = base64ToUint8Array(backup.salt);
-    const key = await cryptoService.deriveKey(password, salt);
+    // Support both Argon2id (v2) and PBKDF2 (legacy v1)
+    const key = await cryptoService.deriveKey(password, salt, backup.version >= 2 ? 'argon2id' : 'pbkdf2');
 
     const decryptedStr = await cryptoService.decrypt(backup.ciphertext, backup.iv, key);
     const data = JSON.parse(decryptedStr);

@@ -3,6 +3,7 @@ import { X, Wand2, Lock, FileText, User, CreditCard, Crown, Sparkles } from 'luc
 import { useAuth } from '../context/AuthContext';
 import type { VaultRecord, VaultItemType } from '../types';
 import { PasswordGenerator } from './PasswordGenerator';
+import { estimateStrength } from '../utils/strength';
 
 interface VaultItemModalProps {
     isOpen: boolean;
@@ -220,8 +221,27 @@ export const VaultItemModal: React.FC<VaultItemModalProps> = ({
                                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                                         className="input-glass font-mono"
                                     />
+                                    {formData.password && (
+                                        <div className="mt-2 flex items-center gap-2">
+                                            <div className="flex-1 h-1 bg-white/5 rounded-full overflow-hidden">
+                                                <div
+                                                    className={`h-full transition-all duration-500 ${estimateStrength(formData.password).score <= 1 ? 'bg-red-500' :
+                                                        estimateStrength(formData.password).score <= 2 ? 'bg-amber-500' :
+                                                            estimateStrength(formData.password).score <= 3 ? 'bg-primary-500' :
+                                                                'bg-green-500'
+                                                        }`}
+                                                    style={{ width: `${(estimateStrength(formData.password).score + 1) * 20}%` }}
+                                                />
+                                            </div>
+                                            <span className="text-[9px] font-black uppercase text-slate-500 tracking-widest whitespace-nowrap">
+                                                {estimateStrength(formData.password).label} ({estimateStrength(formData.password).bits} bits)
+                                            </span>
+                                        </div>
+                                    )}
                                     {showGenerator && (
-                                        <PasswordGenerator onSelect={(pwd) => setFormData({ ...formData, password: pwd })} />
+                                        <div className="mt-4">
+                                            <PasswordGenerator onSelect={(pwd) => setFormData({ ...formData, password: pwd })} />
+                                        </div>
                                     )}
                                 </div>
                                 <div>

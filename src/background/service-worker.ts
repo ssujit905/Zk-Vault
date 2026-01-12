@@ -344,7 +344,81 @@ chrome.commands.onCommand.addListener((command) => {
     if (command === 'panic-lock') performPanicLock();
 });
 
-chrome.idle.setDetectionInterval(60);
+// Lock Policy Engine
+async function enforceLockPolicies(state?: string) {
+    const STORAGE_KEY = 'zk_vault_data';
+    const result = await chrome.storage.local.get(STORAGE_KEY);
+    const storageData = result[STORAGE_KEY] as any;
+    const settings = storageData?.settings || {
+        autoLockTimeout: 30,
+        lockOnBrowserLock: true,
+        lockOnWindowBlur: false
+    };
+
+    if (state) {
+        // Handle Idle/Lock state
+        if (state === 'locked' && settings.lockOnBrowserLock) {
+            await performPanicLock();
+        } else if (state === 'idle') {
+            await performPanicLock();
+        }
+    } else {
+        // Manual trigger (e.g. on window blur)
+        if (settings.lockOnWindowBlur) {
+            await performPanicLock();
+        }
+    }
+}
+
+// Anti-Tamper / Integrity Signals
+async function checkIntegrity() {
+    const info = await chrome.management.getSelf();
+    const isDev = info.installType === 'development';
+
+    if (isDev) {
+        console.warn('Zk Vault: Performance Integrity Signal - Running in Dev Mode (Unpacked)');
+    }
+
+    // Store integrity status for UI
+    const result = await chrome.storage.local.get('zk_vault_data');
+    const storageData = result['zk_vault_data'] as any;
+    if (storageData) {
+        storageData.integrity = {
+            isDev,
+            version: chrome.runtime.getManifest().version,
+            checkedAt: Date.now()
+        };
+        await chrome.storage.local.set({ 'zk_vault_data': storageData });
+    }
+}
+
+// Initial Configuration
+chrome.storage.local.get('zk_vault_data', (result) => {
+    const data = result.zk_vault_data as any;
+    const timeout = data?.settings?.autoLockTimeout || 30;
+    chrome.idle.setDetectionInterval(timeout * 60);
+    checkIntegrity();
+});
+
 chrome.idle.onStateChanged.addListener(async (state) => {
-    if (state === 'locked' || state === 'idle') await performPanicLock();
+    await enforceLockPolicies(state);
+});
+
+// Windows focus change (Blur)
+chrome.windows.onFocusChanged.addListener(async (windowId) => {
+    if (windowId === chrome.windows.WINDOW_ID_NONE) {
+        await enforceLockPolicies();
+    }
+});
+
+// Listen for settings changes to update detection interval
+chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === 'local' && changes.zk_vault_data) {
+        const newVal = changes.zk_vault_data.newValue as any;
+        const oldVal = changes.zk_vault_data.oldValue as any;
+        if (newVal?.settings?.autoLockTimeout !== oldVal?.settings?.autoLockTimeout) {
+            const timeout = newVal?.settings?.autoLockTimeout || 30;
+            chrome.idle.setDetectionInterval(timeout * 60);
+        }
+    }
 });

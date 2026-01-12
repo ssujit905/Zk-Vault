@@ -102,4 +102,7 @@ export interface UserSettings {
     autoLockTimeout: number; // in minutes
     clipboardClearTimeout: number; // in seconds
     theme: 'dark' | 'light';
+    lockOnBrowserLock: boolean;
+    lockOnWindowBlur: boolean;
+    lockOnPageNavigation: boolean;
 }

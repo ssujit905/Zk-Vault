@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { RefreshCw, Copy, Check } from 'lucide-react';
+import { estimateStrength } from '../utils/strength';
 
 interface PasswordGeneratorProps {
     onSelect: (password: string) => void;
@@ -12,6 +13,8 @@ export const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ onSelect }
     const [useUppercase, setUseUppercase] = useState(true);
     const [generated, setGenerated] = useState('');
     const [copied, setCopied] = useState(false);
+
+    const strength = estimateStrength(generated);
 
     // Character sets
     const CHARS = {
@@ -49,20 +52,10 @@ export const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ onSelect }
         setTimeout(() => setCopied(false), 2000);
     };
 
-    const calculateStrength = () => {
-        let strength = 0;
-        if (length >= 12) strength += 1;
-        if (length >= 16) strength += 1;
-        if (useUppercase) strength += 1;
-        if (useNumbers) strength += 1;
-        if (useSymbols) strength += 1;
-        return strength;
-    };
-
     const strengthColor = () => {
-        const s = calculateStrength();
-        if (s <= 2) return 'bg-red-500';
-        if (s <= 4) return 'bg-yellow-500';
+        if (strength.score <= 1) return 'bg-red-500';
+        if (strength.score <= 2) return 'bg-amber-500';
+        if (strength.score <= 3) return 'bg-primary-500';
         return 'bg-green-500';
     };
 
