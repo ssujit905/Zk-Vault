@@ -9,6 +9,12 @@ class AutofillManager {
     }
 
     private init() {
+        // Elite Tier Security: Only run in the top-level window to prevent iframe harvesting
+        if (window.top !== window) {
+            // console.log('Zk Vault: Autofill disabled in iframe for security');
+            return;
+        }
+
         // Initial scan
         this.scanInputs();
 
@@ -297,6 +303,23 @@ class AutofillManager {
           `;
 
             item.addEventListener('click', () => {
+                // Heuristic Security Check: Verify form action if possible
+                const form = input.form;
+                if (form && (form as HTMLFormElement).action) {
+                    try {
+                        const actionUrl = new URL((form as HTMLFormElement).action);
+                        const currentUrl = new URL(window.location.href);
+                        if (actionUrl.hostname !== currentUrl.hostname && !actionUrl.hostname.endsWith('.' + currentUrl.hostname)) {
+                            if (!confirm(`Warning: This form is sending data to a different domain (${actionUrl.hostname}). Do you still want to fill?`)) {
+                                dropdown.remove();
+                                return;
+                            }
+                        }
+                    } catch (e) {
+                        // Action is relative or malformed, continue
+                    }
+                }
+
                 this.fillCredentials(input, cred);
                 dropdown.remove();
             });

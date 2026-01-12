@@ -3,6 +3,9 @@
 
 const OFFSCREEN_PATH = 'src/offscreen/offscreen.html';
 
+// Elite Tier: Volatile in-memory S-KEK Handover
+let ephemeralSKEK: CryptoKey | null = null;
+
 chrome.runtime.onInstalled.addListener(() => {
     console.log('Zk Vault installed successfully');
 
@@ -23,7 +26,6 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 
 // Setup offscreen document
 async function setupOffscreenDocument(path: string) {
-    // Check if offscreen document exists
     const existingContexts = await chrome.runtime.getContexts({
         contextTypes: [chrome.runtime.ContextType.OFFSCREEN_DOCUMENT],
         documentUrls: [chrome.runtime.getURL(path)]
@@ -33,13 +35,10 @@ async function setupOffscreenDocument(path: string) {
         return;
     }
 
-    // Create offscreen document
-    // @ts-ignore - TS might not know offline API yet
     if (chrome.offscreen) {
-        // @ts-ignore
         await chrome.offscreen.createDocument({
             url: path,
-            reasons: ['CLIPBOARD'], // @ts-ignore
+            reasons: ['CLIPBOARD'],
             justification: 'Clear clipboard after timeout',
         });
     } else {
@@ -48,10 +47,52 @@ async function setupOffscreenDocument(path: string) {
 }
 
 async function closeOffscreenDocument() {
-    // @ts-ignore
     if (chrome.offscreen) {
-        // @ts-ignore
         await chrome.offscreen.closeDocument();
+    }
+}
+
+// Helper: Decode Base64
+const base64ToUint8Array = (base64: string) => {
+    const binary_string = atob(base64);
+    const len = binary_string.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+        bytes[i] = binary_string.charCodeAt(i);
+    }
+    return bytes;
+};
+
+// Helper: Get Unsealed PMK
+async function getUnsealedMasterKey() {
+    if (!ephemeralSKEK) return null;
+
+    try {
+        const sessionData = await chrome.storage.session.get(['sealedPmk', 'pmkIv']) as { sealedPmk?: string, pmkIv?: string };
+        const sealedPmk = sessionData.sealedPmk;
+        const pmkIv = sessionData.pmkIv;
+
+        if (!sealedPmk || !pmkIv) return null;
+
+        const sealedData = base64ToUint8Array(sealedPmk);
+        const iv = base64ToUint8Array(pmkIv);
+
+        const pmkRaw = await crypto.subtle.decrypt(
+            { name: 'AES-GCM', iv: iv } as any,
+            ephemeralSKEK,
+            sealedData
+        );
+
+        return await crypto.subtle.importKey(
+            'raw',
+            pmkRaw,
+            { name: 'AES-GCM', length: 256 },
+            true,
+            ['encrypt', 'decrypt']
+        );
+    } catch (e) {
+        console.warn('Failed to unseal PMK');
+        return null;
     }
 }
 
@@ -64,6 +105,23 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 async function handleMessage(request: any, sender: chrome.runtime.MessageSender, sendResponse: (response: any) => void) {
     if (request.type === 'PING') {
         sendResponse({ status: 'OK' });
+        return;
+    }
+
+    if (request.type === 'SET_SESSION_KEK') {
+        try {
+            ephemeralSKEK = await crypto.subtle.importKey(
+                'jwk',
+                request.kekJwk,
+                { name: 'AES-GCM', length: 256 },
+                true,
+                ['encrypt', 'decrypt']
+            );
+            sendResponse({ status: 'OK' });
+        } catch (e) {
+            console.warn('KEK Handover failed');
+            sendResponse({ status: 'ERROR' });
+        }
         return;
     }
 
@@ -83,24 +141,12 @@ async function handleMessage(request: any, sender: chrome.runtime.MessageSender,
 
     if (request.type === 'SEARCH_AUTOFILL') {
         try {
-            // 1. Get Master Key from Session
-            const session = await chrome.storage.session.get('masterKey');
-            if (!session || !session.masterKey) {
+            const masterKey = await getUnsealedMasterKey();
+            if (!masterKey) {
                 sendResponse({ status: 'LOCKED' });
                 return;
             }
 
-            // 2. Import Key
-            const masterKey = await crypto.subtle.importKey(
-                'jwk',
-                session.masterKey,
-                { name: 'AES-GCM', length: 256 },
-                true,
-                ['encrypt', 'decrypt']
-            );
-
-            // 3. Load Vault
-            // Duplicate storage logic or import? Importing is better but for SW simplicity, direct call:
             const result = await chrome.storage.local.get('zk_vault_data');
             const storageData = result['zk_vault_data'] as any;
 
@@ -111,18 +157,6 @@ async function handleMessage(request: any, sender: chrome.runtime.MessageSender,
 
             const records = storageData.vault.records;
             const matches = [];
-
-            // 4. Decrypt and Filter
-            // Helper to decode Base64
-            const base64ToUint8Array = (base64: string) => {
-                const binary_string = atob(base64);
-                const len = binary_string.length;
-                const bytes = new Uint8Array(len);
-                for (let i = 0; i < len; i++) {
-                    bytes[i] = binary_string.charCodeAt(i);
-                }
-                return bytes;
-            };
 
             for (const record of records) {
                 try {
@@ -139,12 +173,8 @@ async function handleMessage(request: any, sender: chrome.runtime.MessageSender,
                     const jsonStr = dec.decode(decryptedContent);
                     const data = JSON.parse(jsonStr);
 
-                    // Only autofill login items
                     if (data.type && data.type !== 'login') continue;
 
-                    // Check domain match
-                    // data.url vs request.domain
-                    // Strict domain matching
                     const storedUrl = data.url?.toLowerCase() || '';
                     const currentDomain = request.domain.toLowerCase();
 
@@ -157,13 +187,12 @@ async function handleMessage(request: any, sender: chrome.runtime.MessageSender,
                             storedHost = new URL('https://' + storedUrl).hostname;
                         }
 
-                        if (storedHost === currentDomain ||
-                            storedHost.endsWith('.' + currentDomain) ||
-                            currentDomain.endsWith('.' + storedHost)) {
+                        if (storedHost === currentDomain) {
+                            isMatch = true;
+                        } else if (storedHost.endsWith('.' + currentDomain)) {
                             isMatch = true;
                         }
                     } catch (e) {
-                        // Fallback if URL is malformed
                         isMatch = storedUrl === currentDomain;
                     }
 
@@ -174,67 +203,55 @@ async function handleMessage(request: any, sender: chrome.runtime.MessageSender,
                             password: data.password
                         });
                     }
-
-                } catch (e) {
-                    // decryption failed or bad record
-                }
+                } catch (e) { }
             }
 
-            // 5. Tier Check: Limit Free Tier to 3 unique domains per month
-            const storageResult = await chrome.storage.local.get('zk_vault_data');
-            const tier = (storageResult['zk_vault_data'] as any)?.tier || 'free';
+            const usageLimitCheck = async () => {
+                const tier = storageData.tier || 'free';
+                if (tier === 'free' && matches.length > 0) {
+                    const now = new Date();
+                    const currentMonth = `${now.getFullYear()}-${now.getMonth()}`;
+                    const usageResult = await chrome.storage.local.get('autofill_usage');
+                    let usage = (usageResult.autofill_usage as any) || { month: currentMonth, domains: [] };
 
-            if (tier === 'free' && matches.length > 0) {
-                const now = new Date();
-                const currentMonth = `${now.getFullYear()}-${now.getMonth()}`;
+                    if (usage.month !== currentMonth) usage = { month: currentMonth, domains: [] };
 
-                const usageResult = await chrome.storage.local.get('autofill_usage');
-                let usage = (usageResult.autofill_usage as any) || { month: currentMonth, domains: [] };
-
-                // Reset if new month
-                if (usage.month !== currentMonth) {
-                    usage = { month: currentMonth, domains: [] };
-                }
-
-                if (!usage.domains.includes(request.domain)) {
-                    if (usage.domains.length >= 3) {
-                        // Track conversion friction point
-                        console.log('[Analytics] autofill_limit_reached', { domain: request.domain });
-
-                        sendResponse({
-                            status: 'LIMIT_REACHED',
-                            message: 'Monthly Free Tier limit reached (3 unique domains). Upgrade to Pro for unlimited autofill across all your sites.'
-                        });
-                        return;
+                    if (!usage.domains.includes(request.domain)) {
+                        if (usage.domains.length >= 3) {
+                            sendResponse({
+                                status: 'LIMIT_REACHED',
+                                message: 'Monthly Free Tier limit reached.'
+                            });
+                            return true;
+                        }
+                        usage.domains.push(request.domain);
+                        await chrome.storage.local.set({ autofill_usage: usage });
                     }
-                    // Record new domain use
-                    usage.domains.push(request.domain);
-                    await chrome.storage.local.set({ autofill_usage: usage });
                 }
-            }
+                return false;
+            };
 
-            sendResponse({ status: 'OK', credentials: matches });
+            if (!(await usageLimitCheck())) {
+                sendResponse({ status: 'OK', credentials: matches });
+            }
 
         } catch (e) {
-            console.warn('Autofill request failed (locked or invalid session)');
+            console.warn('Autofill request failed');
             sendResponse({ status: 'ERROR' });
         }
     }
 
     if (request.type === 'OPEN_OPTIONS') {
         const url = chrome.runtime.getURL('options.html');
-        const hash = request.hash ? `#${request.hash}` : '';
-        chrome.tabs.create({ url: `${url}${hash}` });
+        chrome.tabs.create({ url: `${url}${request.hash ? '#' + request.hash : ''}` });
         sendResponse({ status: 'OK' });
         return;
     }
 
     if (request.type === 'CHECK_IF_SAVE_NEEDED') {
         const checkNeeded = async () => {
-            const session = await chrome.storage.session.get('masterKey');
-            if (!session || !session.masterKey) return; // Locked
-
-            // We could check if exists, but for now just show banner if password is not empty
+            const masterKey = await getUnsealedMasterKey();
+            if (!masterKey) return;
             if (request.data.password) {
                 chrome.tabs.sendMessage(sender.tab?.id!, {
                     type: 'SHOW_SAVE_BANNER',
@@ -249,23 +266,15 @@ async function handleMessage(request: any, sender: chrome.runtime.MessageSender,
     if (request.type === 'ADD_RECORD_DIRECT') {
         const addRecord = async () => {
             try {
-                const session = await chrome.storage.session.get('masterKey');
-                if (!session || !session.masterKey) return;
-
-                const masterKey = await crypto.subtle.importKey(
-                    'jwk',
-                    session.masterKey,
-                    { name: 'AES-GCM', length: 256 },
-                    true,
-                    ['encrypt', 'decrypt']
-                );
+                const masterKey = await getUnsealedMasterKey();
+                if (!masterKey) return;
 
                 const result = await chrome.storage.local.get('zk_vault_data');
                 const storageData = result['zk_vault_data'] as any;
                 if (!storageData || !storageData.vault) return;
 
                 const { url, username, password, title } = request.record;
-                const recordToSave = { title, username, password, url, notes: '' };
+                const recordToSave = { title, username, password, url, notes: '', type: 'login' };
                 const jsonStr = JSON.stringify(recordToSave);
 
                 const iv = crypto.getRandomValues(new Uint8Array(12));
@@ -297,36 +306,23 @@ async function handleMessage(request: any, sender: chrome.runtime.MessageSender,
                 await chrome.storage.local.set({ ['zk_vault_data']: storageData });
                 sendResponse({ status: 'SAVED' });
             } catch (e) {
-                console.warn('Direct record save failed (unauthorized)');
+                console.warn('Direct record save failed');
                 sendResponse({ status: 'ERROR' });
             }
         };
         addRecord();
         return;
     }
-
 }
 
-// Listen for alarms
 chrome.alarms.onAlarm.addListener(async (alarm) => {
     if (alarm.name === 'clear-clipboard') {
         try {
             await setupOffscreenDocument(OFFSCREEN_PATH);
-
-            // Send message to offscreen document
-            chrome.runtime.sendMessage({
-                target: 'offscreen',
-                type: 'CLEAR_CLIPBOARD',
-                data: ''
-            });
-
-            // Close offscreen document after a delay to ensure processing
-            setTimeout(() => {
-                closeOffscreenDocument();
-            }, 1000);
-
+            chrome.runtime.sendMessage({ target: 'offscreen', type: 'CLEAR_CLIPBOARD', data: '' });
+            setTimeout(() => closeOffscreenDocument(), 1000);
         } catch (error) {
-            console.warn('Clipboard cleanup task deferred');
+            console.warn('Clipboard cleanup deferred');
         }
     }
 });
@@ -334,38 +330,21 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 const VAULT_LOCKED_MSG = 'VAULT_LOCKED_MSG';
 
 async function performPanicLock() {
-    console.log('Zk Vault: PANIC LOCK TRIGGERED');
-    // 1. Wipe session memory
-    await chrome.storage.session.remove('masterKey');
-
-    // 2. Clear clipboard immediately
+    await chrome.storage.session.remove(['sealedPmk', 'pmkIv']);
+    ephemeralSKEK = null;
     try {
         await setupOffscreenDocument(OFFSCREEN_PATH);
-        chrome.runtime.sendMessage({
-            target: 'offscreen',
-            type: 'CLEAR_CLIPBOARD',
-            data: ''
-        });
+        chrome.runtime.sendMessage({ target: 'offscreen', type: 'CLEAR_CLIPBOARD', data: '' });
         setTimeout(() => closeOffscreenDocument(), 1000);
-    } catch (e) {
-        console.warn('Panic cleanup partially incomplete');
-    }
-
-    // 3. Notify all components
+    } catch (e) { }
     chrome.runtime.sendMessage({ type: VAULT_LOCKED_MSG }).catch(() => { });
 }
 
-// Global Command Listener
 chrome.commands.onCommand.addListener((command) => {
-    if (command === 'panic-lock') {
-        performPanicLock();
-    }
+    if (command === 'panic-lock') performPanicLock();
 });
 
-// Listen for idle state changes (Auto-locking)
-chrome.idle.setDetectionInterval(60); // 1 minute
+chrome.idle.setDetectionInterval(60);
 chrome.idle.onStateChanged.addListener(async (state) => {
-    if (state === 'locked' || state === 'idle') {
-        await performPanicLock();
-    }
+    if (state === 'locked' || state === 'idle') await performPanicLock();
 });

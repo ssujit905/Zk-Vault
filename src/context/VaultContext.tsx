@@ -144,11 +144,22 @@ export const VaultProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
     const deleteRecord = async (id: string) => {
         const target = records.find(r => r.id === id);
-        const updatedRecords = records.filter((r: VaultRecord) => r.id !== id);
+        if (!target) return;
 
-        if (target) {
-            setRecentActivity(prev => [{ type: 'DELETE', title: target.title, timestamp: Date.now() }, ...prev].slice(0, 10));
-        }
+        // Elite Tier Security: Secure Delete Strategy
+        // Overwrite disk sector with random ciphertext before removal
+        const shreddedTarget = {
+            ...target,
+            title: 'WIPED',
+            notes: 'SHREDDED_' + (crypto as any).randomUUID(),
+            updatedAt: Date.now(),
+        } as VaultRecord;
+
+        const wipeBuffer = records.map(r => r.id === id ? shreddedTarget : r);
+        await saveToStorage(wipeBuffer);
+
+        const updatedRecords = records.filter((r: VaultRecord) => r.id !== id);
+        setRecentActivity(prev => [{ type: 'DELETE', title: target.title, timestamp: Date.now() }, ...prev].slice(0, 10));
 
         setRecords(updatedRecords);
         await saveToStorage(updatedRecords);

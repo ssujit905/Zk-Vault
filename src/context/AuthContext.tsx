@@ -32,6 +32,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             await checkVaultStatus();
             const currentTier = await storageService.getTier();
             setTierState(currentTier);
+
+            // Note: Since KEK is memory-only, we cannot reconstruct the PMK after a reload/refresh.
+            // This is intended per the "Elite Tier" security plan.
         };
         init();
 
@@ -63,6 +66,44 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setTierState(newTier);
     };
 
+    const wrapAndStoreKey = async (pmk: CryptoKey) => {
+        try {
+            // 1. Generate volatile Session KEK
+            const kek = await crypto.subtle.generateKey(
+                { name: 'AES-GCM', length: 256 },
+                true,
+                ['encrypt', 'decrypt']
+            );
+
+            // 2. Wrap PMK with S-KEK
+            const pmkRaw = await crypto.subtle.exportKey('raw', pmk);
+            const iv = crypto.getRandomValues(new Uint8Array(12));
+            const sealedPmk = await crypto.subtle.encrypt(
+                { name: 'AES-GCM', iv },
+                kek,
+                pmkRaw
+            );
+
+            // 3. Store sealed package in session storage
+            await chrome.storage.session.set({
+                sealedPmk: cryptoService.arrayBufferToBase64(sealedPmk),
+                pmkIv: cryptoService.uint8ArrayToBase64(iv)
+            });
+
+            // 4. Preserve PMK in React state
+            setMasterKey(pmk);
+
+            // 5. Transfer S-KEK to Service Worker memory (Handover)
+            const kekJwk = await crypto.subtle.exportKey('jwk', kek);
+            await chrome.runtime.sendMessage({
+                type: 'SET_SESSION_KEK',
+                kekJwk
+            }).catch(() => { }); // SW might be busy
+        } catch (e) {
+            console.warn("Key wrapping failed:", e);
+        }
+    };
+
     const unlock = async (password: string): Promise<boolean> => {
         try {
             const vaultData = await storageService.loadVaultData();
@@ -72,7 +113,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
             const saltBytes = atob(vaultData.security.salt);
             const salt = Uint8Array.from(saltBytes, c => c.charCodeAt(0));
-            const key = await cryptoService.deriveKey(password.trim(), salt);
+
+            // Derive using stored KDF or default to legacy PBKDF2
+            const key = await cryptoService.deriveKey(
+                password.trim(),
+                salt,
+                (vaultData.security.kdf as any) || 'pbkdf2'
+            );
+
             const validation = vaultData.security.validation;
             const decryptedValidation = await cryptoService.decrypt(
                 validation.ciphertext,
@@ -81,10 +129,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             );
 
             if (decryptedValidation.trim() === 'VALID') {
-                const exportedKey = await crypto.subtle.exportKey('jwk', key);
-                await chrome.storage.session.set({ masterKey: exportedKey });
-
-                setMasterKey(key);
+                await wrapAndStoreKey(key);
                 setLastUnlockAt(Date.now());
                 setIsAuthenticated(true);
                 return true;
@@ -101,24 +146,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         try {
             const salt = cryptoService.generateSalt();
             const saltString = btoa(String.fromCharCode(...salt));
-            const key = await cryptoService.deriveKey(password, salt);
+            // Derive using primary Argon2id for new vaults
+            const key = await cryptoService.deriveKey(password, salt, 'argon2id');
             const validation = await cryptoService.encrypt('VALID', key);
 
             const initialVaultData: VaultData = {
-                version: '1.0.0',
+                version: '1.1.0',
                 security: {
                     salt: saltString,
                     validation: validation,
+                    kdf: 'argon2id'
                 },
                 records: [],
             };
 
             await storageService.saveVaultData(initialVaultData);
 
-            const exportedKey = await crypto.subtle.exportKey('jwk', key);
-            await chrome.storage.session.set({ masterKey: exportedKey });
-
-            setMasterKey(key);
+            await wrapAndStoreKey(key);
             setLastUnlockAt(Date.now());
             setHasVault(true);
             setIsAuthenticated(true);
@@ -135,7 +179,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
             const oldSaltStr = atob(vaultData.security.salt);
             const oldSalt = Uint8Array.from(oldSaltStr, c => c.charCodeAt(0));
-            const oldKey = await cryptoService.deriveKey(oldPassword.trim(), oldSalt);
+            const oldKey = await cryptoService.deriveKey(
+                oldPassword.trim(),
+                oldSalt,
+                (vaultData.security.kdf as any) || 'pbkdf2'
+            );
 
             const validation = vaultData.security.validation;
             const decryptedValidation = await cryptoService.decrypt(
@@ -148,7 +196,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
             const newSalt = cryptoService.generateSalt();
             const newSaltString = btoa(String.fromCharCode(...newSalt));
-            const newKey = await cryptoService.deriveKey(newPassword, newSalt);
+
+            // Always upgrade to Argon2id on password change
+            const newKey = await cryptoService.deriveKey(newPassword, newSalt, 'argon2id');
 
             const reEncryptedRecords = await Promise.all(vaultData.records.map(async (record) => {
                 const decryptedData = await cryptoService.decrypt(
@@ -171,17 +221,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 security: {
                     salt: newSaltString,
                     validation: newValidation,
+                    kdf: 'argon2id'
                 },
                 records: reEncryptedRecords,
-                version: vaultData.version
+                version: '1.1.0'
             };
 
             await storageService.saveVaultData(updatedVaultData);
 
-            const exportedKey = await crypto.subtle.exportKey('jwk', newKey);
-            await chrome.storage.session.set({ masterKey: exportedKey });
-            setMasterKey(newKey);
-
+            await wrapAndStoreKey(newKey);
             return true;
         } catch (error) {
             console.warn('Master password change failed');
@@ -190,7 +238,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const lock = () => {
-        chrome.storage.session.remove('masterKey');
+        chrome.storage.session.remove(['sealedPmk', 'pmkIv']);
         setMasterKey(null);
         setLastUnlockAt(null);
         setIsAuthenticated(false);

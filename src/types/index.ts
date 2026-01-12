@@ -65,8 +65,14 @@ export interface EncryptedVaultRecord {
 export type EncryptedPasswordRecord = EncryptedVaultRecord;
 
 export interface SecurityData {
-    salt: string; // Base64 encoded salt for PBKDF2
-    validation: EncryptedBlob; // Encrypted "VALID" string to verify password
+    salt: string; // Base64 encoded salt
+    validation: EncryptedBlob; // Encrypted "VALID" string
+    kdf?: 'pbkdf2' | 'argon2id';
+    kdfParams?: {
+        iterations?: number;
+        memory?: number;
+        parallelism?: number;
+    };
 }
 
 export interface VaultData {

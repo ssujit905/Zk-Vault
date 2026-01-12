@@ -11,20 +11,38 @@ interface VaultItemCardProps {
 export const VaultItemCard: React.FC<VaultItemCardProps> = ({ record, onEdit, onDelete }) => {
     const [showSensitive, setShowSensitive] = useState(false);
     const [copied, setCopied] = useState<string | null>(null);
+    const [expiryCount, setExpiryCount] = useState<number>(0);
 
     const copyToClipboard = async (text: string, label: string) => {
         try {
             await navigator.clipboard.writeText(text);
             setCopied(label);
-            setTimeout(() => setCopied(null), 2000);
 
             if (label === 'password' || label === 'cardNumber' || label === 'cvv') {
+                setExpiryCount(30); // 30 second clear time
                 chrome.runtime.sendMessage({ type: 'SCHEDULE_CLIPBOARD_CLEAR' });
+            } else {
+                setTimeout(() => setCopied(null), 2000);
             }
         } catch (error) {
             console.warn('Clipboard copy permission denied');
         }
     };
+
+    React.useEffect(() => {
+        if (expiryCount <= 0) {
+            if (copied === 'password' || copied === 'cardNumber' || copied === 'cvv') {
+                setCopied(null);
+            }
+            return;
+        }
+
+        const timer = setInterval(() => {
+            setExpiryCount(prev => prev - 1);
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [expiryCount, copied]);
 
     const getTypeIcon = () => {
         if (record.customIcon) {
@@ -181,7 +199,19 @@ export const VaultItemCard: React.FC<VaultItemCardProps> = ({ record, onEdit, on
 
             <div className="mt-3 text-[10px] text-slate-600 flex justify-between items-center bg-white/[0.02] -mx-4 -mb-4 px-4 py-2 rounded-b-xl border-t border-white/5">
                 <span className="font-black uppercase tracking-[0.1em]">{record.type}</span>
-                <span>Updated {new Date(record.updatedAt).toLocaleDateString()}</span>
+                {expiryCount > 0 ? (
+                    <div className="flex items-center gap-2 text-primary-400">
+                        <span className="font-mono">Clipboard clears in {expiryCount}s</span>
+                        <div className="w-16 h-1 bg-white/5 rounded-full overflow-hidden">
+                            <div
+                                className="h-full bg-primary-500 transition-all duration-1000 ease-linear"
+                                style={{ width: `${(expiryCount / 30) * 100}%` }}
+                            />
+                        </div>
+                    </div>
+                ) : (
+                    <span>Updated {new Date(record.updatedAt).toLocaleDateString()}</span>
+                )}
             </div>
         </div>
     );

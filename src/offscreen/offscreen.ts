@@ -12,17 +12,22 @@ chrome.runtime.onMessage.addListener((message) => {
 const handleClearClipboard = async (_: string) => {
     try {
         // Method 1: Modern Clipboard API
+        // Elite Tier: Sequence Overwrite to disrupt OS clipboard history managers
+        await navigator.clipboard.writeText(`WIPE_${Math.random().toString(36).slice(2, 10)}`);
+        await navigator.clipboard.writeText("CLEARED BY ZK VAULT");
         await navigator.clipboard.writeText('');
     } catch (e) {
         // Method 2: Fallback using textarea + execCommand
-        // This is often more reliable in offscreen documents
         try {
             const textarea = document.getElementById('text') as HTMLTextAreaElement;
             if (textarea) {
+                textarea.value = `WIPE_${Math.random().toString(36).slice(2, 10)}`;
+                textarea.select();
+                document.execCommand('copy');
+
                 textarea.value = '';
                 textarea.select();
                 document.execCommand('copy');
-                // console.log('Clipboard cleared using fallback');
             }
         } catch (fallbackError) {
             console.warn('Clipboard cleanup failed after all attempts');
